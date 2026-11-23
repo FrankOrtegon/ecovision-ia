@@ -3,7 +3,11 @@
   "project": "ecovision-trashnet",
   "workspace": "franks-workspace-2rfjw",
   "task": "Classification (Single-Label)",
-  "dataset_split_counts": {"train": 1764, "valid": 378, "test": 379},
+  "dataset_split_counts": {
+    "train": 1764,
+    "valid": 378,
+    "test": 379
+  },
   "runs": [
     {
       "dataset_version": "v1-baseline-sin-aumento",
@@ -11,7 +15,10 @@
       "architecture": "ResNet50 Classification",
       "license": "Apache-2.0",
       "checkpoint": "predeterminado de Roboflow (no se muestra en la interfaz)",
-      "version_preprocessing": ["Auto-Orient", "Resize stretch 224x224"],
+      "version_preprocessing": [
+        "Auto-Orient",
+        "Resize stretch 224x224"
+      ],
       "training_preprocessing": "None",
       "online_augmentations": "None",
       "hyperparameters": "Default (épocas máximas configuradas: 300; Roboflow no muestra otros valores)",
@@ -40,6 +47,44 @@
         "La accuracy de validación se estanca alrededor de 90-93 % desde la época 6.",
         "La gráfica 'Performance by Class' muestra una clase llamada 'placeholder' que no existe en el dataset. Pendiente de investigar."
       ]
+    },
+    {
+      "dataset_version": "v2-aumento-en-linea",
+      "model_name": "ecovision-trashnet-2-resnet50-t1",
+      "status": "en curso al momento del registro; completar al terminar",
+      "architecture": "ResNet50 Classification",
+      "version_preprocessing": [
+        "Auto-Orient",
+        "Resize stretch 224x224"
+      ],
+      "training_preprocessing": "None",
+      "online_augmentations": {
+        "scope": "solo split train (confirmado en la receta de Roboflow)",
+        "flip": {
+          "horizontal": true,
+          "vertical": true,
+          "probability": 1.0
+        },
+        "rotation": {
+          "degrees": 15,
+          "probability": 0.5
+        },
+        "brightness": {
+          "percent": 15,
+          "brighten": true,
+          "darken": true,
+          "probability": 0.5
+        },
+        "exposure": {
+          "percent": 10,
+          "probability": 0.5
+        }
+      },
+      "hyperparameters": "Default (igual que la v1)",
+      "credit_cap": 1,
+      "estimated_credits_max": 0.76,
+      "note": "Misma arquitectura, datos y split que la v1; la única diferencia es el aumento de datos en línea."
     }
-  ]
+  ],
+  "api_key_note": "La clave original se expuso en el chat y fue regenerada el 2026-11-23. La clave vigente vive solo en backend/.env."
 }
