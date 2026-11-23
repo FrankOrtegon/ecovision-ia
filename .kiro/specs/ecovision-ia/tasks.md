@@ -27,8 +27,8 @@ Ordenado por dependencias. Un punto "BLOQUEO MANUAL" detiene solo esa etapa.
 ## Fase 4: Evaluación
 - [x] 4.1 Paquete `ecovision_eval` (métricas, ROC OvR, AUC, matriz, confusiones, gráficos; se añadió Precision-Recall y AP por clase, recomendado en RED4 para clases desbalanceadas)
 - [x] 4.2 Pruebas con casos calculables a mano y clase sin positivos (15 pruebas)
-- [~] 4.3 `05_run_evaluation.py` (listo y probado sobre validación; falta la ejecución definitiva sobre `test.csv`)
-- [ ] 4.4 `docs/evaluation.md` con resultados reales y análisis
+- [x] 4.3 `05_run_evaluation.py` ejecutado sobre `test.csv` (una vez, con `--final`) y `06_analyze_results.py`
+- [x] 4.4 `docs/evaluation.md` con resultados reales y análisis
 
 ## Fase 5: Backend
 - [x] 5.1 Configuración, logging, CORS, manejo de errores
@@ -46,21 +46,21 @@ Ordenado por dependencias. Un punto "BLOQUEO MANUAL" detiene solo esa etapa.
 - [x] 6.8 Vitest, `tsc`, `eslint`, build
 
 ## Fase 7: Integración
-- [ ] 7.1 Ejecución local completa con modelo real
-- [ ] 7.2 Pruebas de extremo a extremo manuales documentadas
-- [ ] 7.3 Revisión de seguridad (CA-5)
+- [x] 7.1 Ejecución local completa con modelo real
+- [x] 7.2 Pruebas de extremo a extremo manuales documentadas
+- [x] 7.3 Revisión de seguridad (CA-5)
 
 ## Fase 8: Despliegue
-- [ ] 8.1 Verificar planes y límites vigentes de Render y Vercel
+- [x] 8.1 Verificar planes y límites vigentes de Render y Vercel
 - [ ] 8.2 BLOQUEO MANUAL: cuentas y variables de entorno en los proveedores
 - [ ] 8.3 Despliegue backend, luego frontend, ajuste de CORS
 - [ ] 8.4 Prueba de humo en producción
 - [ ] 8.5 `docs/deployment.md`
 
 ## Fase 9: Evidencias
-- [ ] 9.1 Capturas reales y `docs/evidence-checklist.md` completo
-- [ ] 9.2 `docs/video-script.md` (máx. 10 min)
-- [ ] 9.3 Insumos del informe APA 7 con referencias verificadas
+- [~] 9.1 Capturas reales y `docs/evidence-checklist.md` completo
+- [x] 9.2 `docs/video-script.md` (máx. 10 min)
+- [x] 9.3 Insumos del informe APA 7 con referencias verificadas
 
 ## Evidencias por criterio de la rúbrica
 

@@ -1,0 +1,9 @@
+{
+  "document_date": "2026-11-23",
+  "frontend_url": null,
+  "backend_url": null,
+  "verified_on": null,
+  "latency_ms_min": 620,
+  "latency_ms_max": 825,
+  "eval_seconds_test_via_app": 18
+}

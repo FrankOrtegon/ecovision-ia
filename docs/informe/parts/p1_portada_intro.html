@@ -1,0 +1,51 @@
+<div class="portada">
+  <p class="titulo">EcoVision IA: Sistema Inteligente de Clasificación de Residuos mediante Visión por Computador</p>
+  <p>Frank Ortegón y [Nombre del segundo integrante]</p>
+  <p>Maestría en Inteligencia Artificial, [Nombre de la universidad]</p>
+  <p>Visión por Computador</p>
+  <p>[Nombre del docente]</p>
+  <p>[[fecha_larga]]</p>
+</div>
+
+<div class="resumen salto">
+  <h1>Resumen</h1>
+  <p class="sin-sangria">La identificación incorrecta de los materiales dificulta su separación y aprovechamiento en instituciones educativas y organizaciones con programas de gestión ambiental. Este trabajo desarrolla EcoVision IA, una aplicación web que clasifica el material aparente de una imagen en seis categorías (cartón, vidrio, metal, papel, plástico y otros residuos) con un modelo de visión por computador entrenado y alojado en la plataforma Roboflow y consumido mediante una API REST propia. Se utilizó el conjunto público TrashNet ([[n_total]] imágenes), del que se depuraron [[n_excl]] imágenes con etiquetas contradictorias y se generaron particiones estratificadas de entrenamiento, validación y prueba (70/15/15, semilla 42) sin fuga de datos. Se entrenaron dos modelos ResNet50, sin y con aumento de datos, y se eligió entre ellos únicamente con la validación; la diferencia no fue estadísticamente distinguible (McNemar, <i>p</i> = [[mcnemar_p]]), por lo que se conservó el modelo más simple. En una única evaluación sobre el conjunto de prueba ([[n_test]] imágenes), el modelo alcanzó una exactitud de [[acc_test]] (IC 95 %: [[acc_ci]]), un F1 macro de [[f1_macro]] y un AUC macro aproximado de [[auc_macro]]. La clase otros residuos fue la más difícil (F1 = [[f1_trash]]). El sistema incluye clasificación individual y por lotes, evaluación con imágenes etiquetadas, métricas con scikit-learn, [[n_tests_total]] pruebas automatizadas y una configuración de contenedor verificada localmente. Se documentan las limitaciones, entre ellas que el proveedor omite las probabilidades inferiores a ~1 %, lo que vuelve aproximadas las curvas ROC.</p>
+  <p class="kw"><i>Palabras clave:</i> visión por computador, clasificación de imágenes, residuos, TrashNet, ResNet50, Roboflow, curva ROC, FastAPI</p>
+</div>
+
+<div class="salto">
+  <h1>EcoVision IA: Sistema Inteligente de Clasificación de Residuos mediante Visión por Computador</h1>
+
+  <h2>Introducción</h2>
+  <p>La separación adecuada de los residuos depende, en primer lugar, de reconocer de qué material está hecho cada objeto. En instituciones educativas y organizaciones con programas de sostenibilidad esa decisión la toman a diario estudiantes, docentes y personal administrativo que no siempre cuentan con una guía visual a mano, y un material mal identificado dificulta su aprovechamiento posterior. La visión por computador ofrece una vía para apoyar esa decisión: un modelo de clasificación de imágenes puede proponer, a partir de una fotografía, la categoría del material aparente (Espejo, s. f.-b).</p>
+  <p>Este trabajo desarrolla y evalúa EcoVision IA, una aplicación web que integra un modelo de clasificación entrenado y desplegado con una plataforma en la nube. El énfasis está puesto en dos aspectos que suelen quedar fuera de los prototipos: una evaluación estadística rigurosa del modelo y una aplicación que consume el modelo real a través de una API, sin resultados simulados. Las cifras de resultados de este documento provienen de ejecuciones reales registradas en el repositorio del proyecto y se generan mediante código, no se transcriben a mano; las únicas excepciones, señaladas como aproximadas, son los valores leídos de las gráficas de entrenamiento de la plataforma.</p>
+
+  <h3>Problema y justificación</h3>
+  <p>Identificar mal un material dificulta su separación y aprovechamiento. Un clasificador automático puede reducir la fricción de esa decisión, pero solo es útil si se conoce su desempeño por categoría, su grado de confianza y sus límites. Por ello el problema no se reduce a entrenar un modelo con alta exactitud global: exige medir qué clases confunde, qué tan fiables son sus probabilidades y qué errores comete con más seguridad aparente. El sistema se plantea como apoyo a la decisión y no como árbitro: <i>clasifica el material aparente según las categorías aprendidas y no determina si un residuo es reciclable</i>.</p>
+
+  <h3>Objetivos</h3>
+  <p><b>Objetivo general.</b> Implementar un modelo de clasificación de imágenes de residuos, integrarlo en una aplicación web que permita su uso real mediante una API y evaluar su rendimiento con métricas de precisión, exhaustividad, F1, curvas ROC y AUC.</p>
+  <p class="sin-sangria"><b>Objetivos específicos.</b></p>
+  <ol>
+    <li>Seleccionar, explorar y preparar un conjunto de datos público, con particiones reproducibles y sin fuga de datos.</li>
+    <li>Entrenar modelos de clasificación en una plataforma en la nube, justificar los ajustes y elegir la versión final con un criterio definido de antemano.</li>
+    <li>Desplegar el modelo para inferencia mediante una API autenticada, protegiendo las credenciales.</li>
+    <li>Desarrollar una aplicación web que permita clasificar imágenes individuales y por lotes y evaluar el modelo con imágenes etiquetadas.</li>
+    <li>Evaluar el modelo sobre un conjunto de prueba independiente, analizar los errores e interpretar los resultados con sus limitaciones.</li>
+  </ol>
+
+  <h3>Alcance y estructura del documento</h3>
+  <p>El alcance se limita a la clasificación de una imagen completa en seis categorías; no se aborda la detección de varios objetos en una escena ni la determinación de reciclabilidad. El documento sigue el orden de la actividad: contexto y área de aplicación, selección y preparación del conjunto de datos, entrenamiento, despliegue del modelo, creación de la aplicación y evaluación. Cierran el texto la discusión, las limitaciones y las conclusiones. Los anexos relacionan cada requisito con su evidencia verificable.</p>
+
+  <h2>Contexto y Área de Aplicación</h2>
+  <h3>Contexto del proyecto</h3>
+  <p>El proyecto se desarrolla como actividad de la asignatura de Visión por Computador de la maestría y se plantea para un escenario institucional concreto: centros educativos y organizaciones con programas de gestión ambiental, cuyos usuarios potenciales son estudiantes, docentes, personal administrativo y responsables de sostenibilidad. No es un producto comercial en operación; es un prototipo funcional con fines académicos que puede ser el punto de partida de una herramienta de apoyo en puntos de separación de residuos o en campañas de educación ambiental.</p>
+
+  <h3>Área de aplicación</h3>
+  <p>El proyecto pertenece al área de <i>reconocimiento de objetos</i>, en la modalidad de clasificación de imágenes: dada una imagen que contiene un único objeto, el sistema asigna una de seis etiquetas. En el flujo clásico de un sistema de visión por computador (captura, preprocesamiento, segmentación y reconocimiento o clasificación; Espejo, s. f.-d), este trabajo se centra en la última etapa, apoyándose en un modelo que aprende directamente de los píxeles y en un preprocesamiento mínimo (corrección de orientación y redimensionamiento).</p>
+
+  <h3>Fundamentos técnicos</h3>
+  <p>Las redes neuronales convolucionales aprenden filtros que detectan patrones locales (bordes, texturas) y los combinan en representaciones jerárquicas mediante capas de convolución, agrupación (<i>pooling</i>) y capas completamente conectadas (Espejo, s. f.-c). Las redes residuales (ResNet) añaden conexiones que suman la entrada de un bloque a su salida, lo que facilita entrenar redes profundas (He et al., 2016); el modelo de este trabajo es una ResNet de 50 capas.</p>
+  <p>Con pocos datos etiquetados, el aprendizaje por transferencia reutiliza un modelo entrenado en un conjunto amplio y lo ajusta a la nueva tarea (Pan y Yang, 2010; Espejo, s. f.-e). El aumento de datos, por su parte, genera variaciones de las imágenes de entrenamiento para reducir el sobreajuste, siempre que las transformaciones tengan sentido para la tarea (Shorten y Khoshgoftaar, 2019; Espejo, s. f.-e).</p>
+  <p>La evaluación de un clasificador multiclase se apoya en la matriz de confusión y en las métricas derivadas de ella. La exactitud puede ser engañosa con clases desbalanceadas; por eso se complementa con precisión, exhaustividad (<i>recall</i>) y F1, la media armónica de las dos anteriores (Espejo, s. f.-a). Para una clase dada, la curva ROC representa la tasa de verdaderos positivos frente a la de falsos positivos al variar el umbral de decisión, y el área bajo la curva (AUC) resume la capacidad de separar esa clase de las demás (Fawcett, 2006). En problemas con clases minoritarias, la curva de precisión y exhaustividad (PR) puede ser más informativa que la ROC (Saito y Rehmsmeier, 2015). Para multiclase se usa el esquema uno contra el resto y se promedian las clases (promedio macro). Finalmente, un modelo está <i>calibrado</i> si su confianza coincide con su acierto real; las redes profundas modernas tienden a ser sobreconfiadas (Guo et al., 2017).</p>
+</div>

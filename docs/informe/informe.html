@@ -1,0 +1,431 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><title>EcoVision IA</title><link rel="stylesheet" href="informe.css"></head><body><div class="portada">
+  <p class="titulo">EcoVision IA: Sistema Inteligente de Clasificación de Residuos mediante Visión por Computador</p>
+  <p>Frank Ortegón y [Nombre del segundo integrante]</p>
+  <p>Maestría en Inteligencia Artificial, [Nombre de la universidad]</p>
+  <p>Visión por Computador</p>
+  <p>[Nombre del docente]</p>
+  <p>23 de noviembre de 2026</p>
+</div>
+
+<div class="resumen salto">
+  <h1>Resumen</h1>
+  <p class="sin-sangria">La identificación incorrecta de los materiales dificulta su separación y aprovechamiento en instituciones educativas y organizaciones con programas de gestión ambiental. Este trabajo desarrolla EcoVision IA, una aplicación web que clasifica el material aparente de una imagen en seis categorías (cartón, vidrio, metal, papel, plástico y otros residuos) con un modelo de visión por computador entrenado y alojado en la plataforma Roboflow y consumido mediante una API REST propia. Se utilizó el conjunto público TrashNet (2527 imágenes), del que se depuraron 6 imágenes con etiquetas contradictorias y se generaron particiones estratificadas de entrenamiento, validación y prueba (70/15/15, semilla 42) sin fuga de datos. Se entrenaron dos modelos ResNet50, sin y con aumento de datos, y se eligió entre ellos únicamente con la validación; la diferencia no fue estadísticamente distinguible (McNemar, <i>p</i> = 0,678), por lo que se conservó el modelo más simple. En una única evaluación sobre el conjunto de prueba (379 imágenes), el modelo alcanzó una exactitud de 88,65 % (IC 95 %: 85,49 % a 91,82 %), un F1 macro de 0,856 y un AUC macro aproximado de 0,980. La clase otros residuos fue la más difícil (F1 = 0,619). El sistema incluye clasificación individual y por lotes, evaluación con imágenes etiquetadas, métricas con scikit-learn, 100 pruebas automatizadas y una configuración de contenedor verificada localmente. Se documentan las limitaciones, entre ellas que el proveedor omite las probabilidades inferiores a ~1 %, lo que vuelve aproximadas las curvas ROC.</p>
+  <p class="kw"><i>Palabras clave:</i> visión por computador, clasificación de imágenes, residuos, TrashNet, ResNet50, Roboflow, curva ROC, FastAPI</p>
+</div>
+
+<div class="salto">
+  <h1>EcoVision IA: Sistema Inteligente de Clasificación de Residuos mediante Visión por Computador</h1>
+
+  <h2>Introducción</h2>
+  <p>La separación adecuada de los residuos depende, en primer lugar, de reconocer de qué material está hecho cada objeto. En instituciones educativas y organizaciones con programas de sostenibilidad esa decisión la toman a diario estudiantes, docentes y personal administrativo que no siempre cuentan con una guía visual a mano, y un material mal identificado dificulta su aprovechamiento posterior. La visión por computador ofrece una vía para apoyar esa decisión: un modelo de clasificación de imágenes puede proponer, a partir de una fotografía, la categoría del material aparente (Espejo, s. f.-b).</p>
+  <p>Este trabajo desarrolla y evalúa EcoVision IA, una aplicación web que integra un modelo de clasificación entrenado y desplegado con una plataforma en la nube. El énfasis está puesto en dos aspectos que suelen quedar fuera de los prototipos: una evaluación estadística rigurosa del modelo y una aplicación que consume el modelo real a través de una API, sin resultados simulados. Las cifras de resultados de este documento provienen de ejecuciones reales registradas en el repositorio del proyecto y se generan mediante código, no se transcriben a mano; las únicas excepciones, señaladas como aproximadas, son los valores leídos de las gráficas de entrenamiento de la plataforma.</p>
+
+  <h3>Problema y justificación</h3>
+  <p>Identificar mal un material dificulta su separación y aprovechamiento. Un clasificador automático puede reducir la fricción de esa decisión, pero solo es útil si se conoce su desempeño por categoría, su grado de confianza y sus límites. Por ello el problema no se reduce a entrenar un modelo con alta exactitud global: exige medir qué clases confunde, qué tan fiables son sus probabilidades y qué errores comete con más seguridad aparente. El sistema se plantea como apoyo a la decisión y no como árbitro: <i>clasifica el material aparente según las categorías aprendidas y no determina si un residuo es reciclable</i>.</p>
+
+  <h3>Objetivos</h3>
+  <p><b>Objetivo general.</b> Implementar un modelo de clasificación de imágenes de residuos, integrarlo en una aplicación web que permita su uso real mediante una API y evaluar su rendimiento con métricas de precisión, exhaustividad, F1, curvas ROC y AUC.</p>
+  <p class="sin-sangria"><b>Objetivos específicos.</b></p>
+  <ol>
+    <li>Seleccionar, explorar y preparar un conjunto de datos público, con particiones reproducibles y sin fuga de datos.</li>
+    <li>Entrenar modelos de clasificación en una plataforma en la nube, justificar los ajustes y elegir la versión final con un criterio definido de antemano.</li>
+    <li>Desplegar el modelo para inferencia mediante una API autenticada, protegiendo las credenciales.</li>
+    <li>Desarrollar una aplicación web que permita clasificar imágenes individuales y por lotes y evaluar el modelo con imágenes etiquetadas.</li>
+    <li>Evaluar el modelo sobre un conjunto de prueba independiente, analizar los errores e interpretar los resultados con sus limitaciones.</li>
+  </ol>
+
+  <h3>Alcance y estructura del documento</h3>
+  <p>El alcance se limita a la clasificación de una imagen completa en seis categorías; no se aborda la detección de varios objetos en una escena ni la determinación de reciclabilidad. El documento sigue el orden de la actividad: contexto y área de aplicación, selección y preparación del conjunto de datos, entrenamiento, despliegue del modelo, creación de la aplicación y evaluación. Cierran el texto la discusión, las limitaciones y las conclusiones. Los anexos relacionan cada requisito con su evidencia verificable.</p>
+
+  <h2>Contexto y Área de Aplicación</h2>
+  <h3>Contexto del proyecto</h3>
+  <p>El proyecto se desarrolla como actividad de la asignatura de Visión por Computador de la maestría y se plantea para un escenario institucional concreto: centros educativos y organizaciones con programas de gestión ambiental, cuyos usuarios potenciales son estudiantes, docentes, personal administrativo y responsables de sostenibilidad. No es un producto comercial en operación; es un prototipo funcional con fines académicos que puede ser el punto de partida de una herramienta de apoyo en puntos de separación de residuos o en campañas de educación ambiental.</p>
+
+  <h3>Área de aplicación</h3>
+  <p>El proyecto pertenece al área de <i>reconocimiento de objetos</i>, en la modalidad de clasificación de imágenes: dada una imagen que contiene un único objeto, el sistema asigna una de seis etiquetas. En el flujo clásico de un sistema de visión por computador (captura, preprocesamiento, segmentación y reconocimiento o clasificación; Espejo, s. f.-d), este trabajo se centra en la última etapa, apoyándose en un modelo que aprende directamente de los píxeles y en un preprocesamiento mínimo (corrección de orientación y redimensionamiento).</p>
+
+  <h3>Fundamentos técnicos</h3>
+  <p>Las redes neuronales convolucionales aprenden filtros que detectan patrones locales (bordes, texturas) y los combinan en representaciones jerárquicas mediante capas de convolución, agrupación (<i>pooling</i>) y capas completamente conectadas (Espejo, s. f.-c). Las redes residuales (ResNet) añaden conexiones que suman la entrada de un bloque a su salida, lo que facilita entrenar redes profundas (He et al., 2016); el modelo de este trabajo es una ResNet de 50 capas.</p>
+  <p>Con pocos datos etiquetados, el aprendizaje por transferencia reutiliza un modelo entrenado en un conjunto amplio y lo ajusta a la nueva tarea (Pan y Yang, 2010; Espejo, s. f.-e). El aumento de datos, por su parte, genera variaciones de las imágenes de entrenamiento para reducir el sobreajuste, siempre que las transformaciones tengan sentido para la tarea (Shorten y Khoshgoftaar, 2019; Espejo, s. f.-e).</p>
+  <p>La evaluación de un clasificador multiclase se apoya en la matriz de confusión y en las métricas derivadas de ella. La exactitud puede ser engañosa con clases desbalanceadas; por eso se complementa con precisión, exhaustividad (<i>recall</i>) y F1, la media armónica de las dos anteriores (Espejo, s. f.-a). Para una clase dada, la curva ROC representa la tasa de verdaderos positivos frente a la de falsos positivos al variar el umbral de decisión, y el área bajo la curva (AUC) resume la capacidad de separar esa clase de las demás (Fawcett, 2006). En problemas con clases minoritarias, la curva de precisión y exhaustividad (PR) puede ser más informativa que la ROC (Saito y Rehmsmeier, 2015). Para multiclase se usa el esquema uno contra el resto y se promedian las clases (promedio macro). Finalmente, un modelo está <i>calibrado</i> si su confianza coincide con su acierto real; las redes profundas modernas tienden a ser sobreconfiadas (Guo et al., 2017).</p>
+</div>
+
+<div>
+  <h2>Selección y Preparación del Conjunto de Datos</h2>
+  <h3>Selección y procedencia</h3>
+  <p>Se seleccionó TrashNet (Yang y Thung, 2016), un conjunto público de fotografías de un único objeto sobre una cartulina blanca, tomadas con tres teléfonos móviles y organizadas en seis clases: vidrio, papel, cartón, plástico, metal y otros residuos (<i>trash</i>). Se eligió porque es abierto (el repositorio declara licencia MIT), porque corresponde exactamente al problema de clasificación de material y porque es lo bastante pequeño para reproducirse en un equipo personal. Se descargó la versión redimensionada (<code>dataset-resized.zip</code>, 42,8 MB) del repositorio de los autores (Thung y Yang, s. f.) el 23 de noviembre de 2026 (UTC), y se registró su huella SHA-256 para garantizar la trazabilidad.</p>
+
+  <h3>Exploración</h3>
+  <p>El script de exploración abrió y verificó cada archivo con Pillow. Las 2527 imágenes resultaron íntegras: todas son JPEG en modo RGB de 512 × 384 píxeles, con tamaños de archivo entre 5,6 y 57,9 kB. Los conteos por clase coinciden con los publicados por los autores. La Figura 1 muestra el desequilibrio: la clase mayoritaria (papel) tiene 4,34 veces más imágenes que la minoritaria (otros residuos, 5,42 % del total). La Figura 2 ofrece cinco ejemplos aleatorios por clase (semilla 42); se observa la homogeneidad del fondo y la heterogeneidad interna de la clase otros residuos, que reúne envolturas, servilletas y espuma.</p>
+
+  <div class="figura">
+    <p class="num">Figura 1</p>
+    <p class="tit">Distribución de las imágenes por categoría y partición</p>
+    <img class="media" src="fig/distribucion.png" alt="Distribución por categoría">
+    <p class="nota"><i>Nota.</i> Las barras apiladas muestran las imágenes usadas en cada partición; el número sobre cada barra es el total original de la clase. Elaboración propia con <code>02_explore_dataset.py</code> y <code>03_split_dataset.py</code>.</p>
+  </div>
+
+  <div class="figura">
+    <p class="num">Figura 2</p>
+    <p class="tit">Ejemplos aleatorios de cada categoría</p>
+    <img class="media" src="fig/ejemplos.png" alt="Ejemplos por categoría">
+    <p class="nota"><i>Nota.</i> Cinco imágenes por clase seleccionadas al azar (semilla 42). Fuente: TrashNet (Yang y Thung, 2016).</p>
+  </div>
+
+  <h3>Integridad y duplicados</h3>
+  <p>Se buscaron duplicados exactos (hash SHA-256) y casi exactos (hash perceptual con distancia de Hamming ≤ 2). Aparecieron 3 pares de imágenes con contenido idéntico byte a byte pero <i>etiquetas contradictorias</i> (por ejemplo, la misma fotografía etiquetada como vidrio y como metal). Como su etiqueta verdadera es indeterminable, se excluyeron las 6 imágenes implicadas, quedando 2521 imágenes. Los pares casi idénticos no se eliminaron, porque el hash perceptual produce falsos positivos con fondos blancos; en cambio, los 15 grupos conectados que formaron se asignaron completos a una sola partición, de modo que ninguna fotografía casi repetida pueda estar a la vez en entrenamiento y en prueba.</p>
+
+  <h3>Particiones</h3>
+  <p>Las imágenes se dividieron en entrenamiento (70 %), validación (15 %) y prueba (15 %) mediante una partición estratificada por clase con semilla 42, tratando cada grupo de casi duplicados como una unidad indivisible. Las particiones se exportaron a archivos CSV y la ausencia de fuga se verifica con pruebas automatizadas (sin nombres ni huellas compartidas entre particiones, grupos no divididos, proporciones del 70/15/15 con tolerancia del 1 % y estratificación con diferencia máxima de 2 puntos porcentuales por clase). El conjunto de prueba no se usó para ninguna decisión de diseño. La Tabla 1 resume el resultado.</p>
+
+  <div class="tabla">
+    <p class="num">Tabla 1</p>
+    <p class="tit">Imágenes por categoría y partición</p>
+    <table><thead><tr><th class="izq">Categoría</th><th>Original</th><th>Excluidas</th><th>Entrenamiento</th><th>Validación</th><th>Prueba</th></tr></thead><tbody><tr><td>Cartón</td><td>403</td><td>0</td><td>283</td><td>60</td><td>60</td></tr><tr><td>Vidrio</td><td>501</td><td>3</td><td>348</td><td>75</td><td>75</td></tr><tr><td>Metal</td><td>410</td><td>1</td><td>286</td><td>62</td><td>61</td></tr><tr><td>Papel</td><td>594</td><td>0</td><td>415</td><td>88</td><td>91</td></tr><tr><td>Plástico</td><td>482</td><td>2</td><td>336</td><td>72</td><td>72</td></tr><tr><td>Otros residuos</td><td>137</td><td>0</td><td>96</td><td>21</td><td>20</td></tr><tr><td><b>Total</b></td><td><b>2527</b></td><td><b>6</b></td><td><b>1764</b></td><td><b>378</b></td><td><b>379</b></td></tr></tbody></table>
+    <p class="nota"><i>Nota.</i> Total tras excluir 6 imágenes con etiquetas contradictorias. Porcentajes de la partición sobre el total: entrenamiento 69,97 %, validación 14,99 %, prueba 15,03 %.</p>
+  </div>
+
+  <h3>Carga en la plataforma</h3>
+  <p>Se generó una estructura de carpetas <code>train/valid/test</code> con una subcarpeta por clase, que Roboflow interpreta como la división y la etiqueta de cada imagen (Roboflow, s. f.-c). Al importar se eligió la opción de respetar los valores existentes, y se comprobó en la plataforma que los conteos por clase y por partición coincidían con la Tabla 1. El aumento de datos se aplicó únicamente sobre el conjunto de entrenamiento; las particiones de validación y prueba no se modificaron.</p>
+
+  <h2>Entrenamiento del Modelo</h2>
+  <h3>Plataforma y configuración</h3>
+  <p>Se usó Roboflow para entrenar y alojar el modelo. La plataforma ofrece, para clasificación de una sola etiqueta, las arquitecturas ResNet (18, 34, 50 y 101 capas), ViT y DINOv3 (Roboflow, s. f.-b). Se eligió ResNet50 por ser una arquitectura de referencia para la transferencia de aprendizaje (He et al., 2016; Espejo, s. f.-e) y porque la plataforma la ofrece con un costo de entrenamiento bajo. Ambas versiones del conjunto usan el mismo preprocesamiento (orientación automática y redimensionamiento a 224 × 224 con estiramiento) y los hiperparámetros por defecto de la plataforma (hasta 300 épocas); la interfaz de Roboflow solo muestra el número máximo de épocas y no informa el punto de partida de los pesos, por lo que el resto no se puede documentar (véase Limitaciones). Se entrenó una línea base sin aumento de datos y una segunda versión con aumento en línea, para que la <i>única</i> diferencia entre ambas fuera el aumento (Tabla 2).</p>
+
+  <div class="tabla">
+    <p class="num">Tabla 2</p>
+    <p class="tit">Configuración de los dos entrenamientos</p>
+    <table>
+      <thead><tr><th class="izq">Elemento</th><th>Modelo 1 (línea base)</th><th>Modelo 2 (con aumento)</th></tr></thead>
+      <tbody>
+        <tr><td>Versión del conjunto</td><td>v1-baseline-sin-aumento</td><td>v2-aumento-en-linea</td></tr>
+        <tr><td>Arquitectura</td><td>ResNet50</td><td>ResNet50</td></tr>
+        <tr><td>Entrada</td><td>224 × 224</td><td>224 × 224</td></tr>
+        <tr><td>Imágenes (train/valid/test)</td><td>1764 / 378 / 379</td><td>1764 / 378 / 379</td></tr>
+        <tr><td>Aumento en línea (solo entrenamiento)</td><td>Ninguno</td><td>Volteo horizontal y vertical; rotación ±15°; brillo ±15 %; exposición ±10 %</td></tr>
+        <tr><td>Hiperparámetros</td><td>Por defecto</td><td>Por defecto</td></tr>
+        <tr><td>Épocas ejecutadas</td><td>28 (curvas de 0 a 27)</td><td>No registradas</td></tr>
+        <tr><td>Créditos de la plataforma</td><td>0,17</td><td>No registrados</td></tr>
+      </tbody>
+    </table>
+    <p class="nota"><i>Nota.</i> Datos tomados de la receta de entrenamiento que muestra Roboflow y de <code>ml/results/training_log.json</code>. Las probabilidades de aplicación del aumento fueron 100 % (volteo) y 50 % (rotación, brillo y exposición).</p>
+  </div>
+
+  <p>Los aumentos se eligieron con criterio de dominio (Shorten y Khoshgoftaar, 2019; Espejo, s. f.-e). Las fotografías se toman desde arriba con el objeto apoyado, por lo que no existe una orientación canónica y los volteos y las rotaciones pequeñas son seguros. Se descartaron los cambios de tono, saturación y escala de grises porque el color ayuda a distinguir categorías como cartón o plástico.</p>
+
+  <h3>Curvas de entrenamiento</h3>
+  <p>En el modelo 1 la exactitud de validación subió de aproximadamente 72 % en la época 0 a cerca de 90 % hacia la época 6, alcanzó un máximo cercano a 93,6 % en la época 15 y terminó en torno a 89,7 % en la última época (valores leídos de la gráfica de Roboflow, por lo que son aproximados). La pérdida de entrenamiento presentó picos repetidos de hasta aproximadamente 1,4, señal de un entrenamiento inestable. La exactitud de validación del modelo desplegado calculada después (0,9365; Tabla 3) coincide con el máximo de la curva, lo que indica que la plataforma conserva el mejor punto del entrenamiento. Esa selección del mejor punto con la validación tiene una consecuencia metodológica que se retoma en la evaluación: la exactitud de validación es una estimación optimista.</p>
+
+  <h3>Comparación y selección</h3>
+  <p>Antes de mirar el conjunto de prueba se fijó la regla de selección: elegir con las métricas de validación calculadas por el módulo propio de evaluación y, ante diferencias no significativas, preferir el modelo más simple. Ambos modelos se evaluaron sobre las 378 imágenes de validación con el mismo código que usa la aplicación (Tabla 3).</p>
+
+  <div class="tabla">
+    <p class="num">Tabla 3</p>
+    <p class="tit">Comparación de los dos modelos en el conjunto de validación</p>
+    <table><thead><tr><th class="izq">Métrica</th><th>Modelo 1 (sin aumento)</th><th>Modelo 2 (con aumento)</th></tr></thead><tbody><tr><td>Exactitud</td><td>0,9365</td><td>0,9286</td></tr><tr><td>Precisión macro</td><td>0,9168</td><td>0,9006</td></tr><tr><td>Recall macro</td><td>0,9175</td><td>0,8937</td></tr><tr><td>F1 macro</td><td>0,9168</td><td>0,8966</td></tr><tr><td>F1 de otros residuos</td><td>0,762</td><td>0,650</td></tr><tr><td>AUC macro (aprox.)</td><td>0,9888</td><td>0,9852</td></tr><tr><td>AP macro (aprox.)</td><td>0,9429</td><td>0,9301</td></tr></tbody></table>
+    <p class="nota"><i>Nota.</i> <i>n</i> = 378. AUC y AP son aproximados (véase la sección de despliegue). El F1 de otros residuos se calcula con solo 21 imágenes.</p>
+  </div>
+
+  <p>El modelo 1 obtuvo valores ligeramente superiores en todas las métricas, pero la diferencia no es distinguible del azar: el modelo 1 acertó 13 imágenes que el modelo 2 falló y el modelo 2 acertó 10 que el modelo 1 falló (prueba exacta de McNemar, 1947, <i>p</i> = 0,678); la diferencia de exactitud fue de 0,79 puntos, con un intervalo de confianza del 95 % por <i>bootstrap</i> (Efron y Tibshirani, 1993) de -1,59 a +3,17 puntos porcentuales, que incluye el cero. Se seleccionó, por tanto, el <b>modelo 1</b> (sin aumento), identificado como <code>ecovision-trashnet/1</code>.</p>
+  <p>Una interpretación prudente es que el aumento de datos no redujo el sobreajuste de forma apreciable en este conjunto. Con una pérdida de entrenamiento inestable y 21 imágenes de validación de la clase minoritaria, las diferencias entre ambos modelos están dentro del ruido de muestreo; no se exploraron otras arquitecturas ni hiperparámetros, decisión consciente de acotar el alcance.</p>
+  <p>Durante el proceso, la plataforma mostró en pantalla sus evaluaciones automáticas sobre el conjunto de prueba de ambos modelos. Esas cifras (con umbrales de confianza distintos, 34 % y 65 %) no se usaron para decidir, no son comparables entre sí y se declaran aquí por transparencia. La evaluación oficial sobre prueba se ejecutó una sola vez, después de elegir el modelo.</p>
+</div>
+
+<div>
+  <h2>Despliegue del Modelo</h2>
+  <p>El modelo seleccionado se aloja en la infraestructura de Roboflow y se consume mediante su API de inferencia sin servidor (<i>serverless</i>; Roboflow, s. f.-a). La solicitud es un <code>POST</code> a <code>https://serverless.roboflow.com/{proyecto}/{versión}</code> con la imagen codificada en base64 y la clave de la cuenta en la cabecera <code>Authorization: Bearer</code>; en este proyecto el identificador es <code>ecovision-trashnet/1</code>. Mediante llamadas reales se comprobó que ese identificador resuelve al modelo entrenado <code>ecovision-trashnet-1-resnet50-t1</code> y que el identificador <code>ecovision-trashnet/2</code> resuelve al segundo modelo, lo que permitió compararlos sin ambigüedad. La respuesta de clasificación contiene, para cada clase devuelta, su nombre y su confianza, además de la mejor clase.</p>
+  <p>La verificación empírica del comportamiento del servicio reveló un hecho con consecuencias para la evaluación: <b>aun con el umbral de confianza en cero, la API omite las clases cuya probabilidad es inferior a aproximadamente 1 %</b>. En una imagen de plástico, por ejemplo, devolvió cinco de las seis clases, con una suma de 0,9948, y omitió la clase metal. Como la suma de las probabilidades es conocida, el sistema estima las clases omitidas repartiendo el residuo (1 menos la suma) entre ellas y marca cada respuesta con un indicador de estimación. La exactitud, la precisión, el recall y el F1 no dependen de esta estimación, porque usan la clase de mayor probabilidad; las curvas ROC y PR y sus áreas sí, y por eso se reportan como aproximadas y se acompañan de un análisis de sensibilidad (Tabla 8).</p>
+  <p>La latencia de la API que informa Roboflow es de milisegundos (3,5 ms en la ficha del modelo 1, tiempo de servidor sin red). Medida de extremo a extremo desde la aplicación, una clasificación individual tarda entre 620 y 825 ms según la red, y la evaluación de las 379 imágenes de prueba a través de la aplicación tardó 18 segundos con cuatro solicitudes en paralelo.</p>
+
+  <h2>Creación de la Aplicación</h2>
+  <h3>Arquitectura</h3>
+  <p>La aplicación sigue una arquitectura de tres capas con separación de responsabilidades (Figura 3). El navegador ejecuta una aplicación de una sola página en React que solo se comunica con el backend; el backend, escrito en Python con FastAPI, valida las entradas, orquesta las llamadas al modelo alojado y calcula las métricas con scikit-learn mediante un paquete de evaluación independiente que también usan los <i>scripts</i> del proyecto. La clave de Roboflow existe únicamente en el backend (variable de entorno) y nunca llega al navegador.</p>
+
+  <div class="figura">
+    <p class="num">Figura 3</p>
+    <p class="tit">Arquitectura de EcoVision IA</p>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 250" width="100%" font-family="Times New Roman, Times, serif" font-size="13">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#334155"/></marker></defs>
+  <rect x="10" y="60" width="200" height="130" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="110" y="85" text-anchor="middle" font-weight="bold">Navegador</text>
+  <text x="110" y="105" text-anchor="middle">React + TypeScript</text>
+  <text x="110" y="124" text-anchor="middle">Inicio · Clasificador</text>
+  <text x="110" y="142" text-anchor="middle">Lotes · Evaluación</text>
+  <text x="110" y="160" text-anchor="middle">Acerca del modelo</text>
+  <text x="110" y="180" text-anchor="middle" font-style="italic" font-size="11">(Vercel)</text>
+  <rect x="280" y="40" width="210" height="170" rx="8" fill="#f8fafc" stroke="#475569" stroke-width="1.5"/>
+  <text x="385" y="65" text-anchor="middle" font-weight="bold">Backend FastAPI</text>
+  <text x="385" y="86" text-anchor="middle">Validación de imágenes</text>
+  <text x="385" y="105" text-anchor="middle">Servicios de predicción</text>
+  <text x="385" y="124" text-anchor="middle">Adaptador Roboflow</text>
+  <text x="385" y="143" text-anchor="middle">Paquete ecovision_eval</text>
+  <text x="385" y="161" text-anchor="middle">(scikit-learn)</text>
+  <text x="385" y="198" text-anchor="middle" font-style="italic" font-size="11">(Render · contenedor Docker)</text>
+  <rect x="560" y="60" width="190" height="130" rx="8" fill="#faf5ff" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="655" y="85" text-anchor="middle" font-weight="bold">Roboflow</text>
+  <text x="655" y="105" text-anchor="middle">API de inferencia</text>
+  <text x="655" y="124" text-anchor="middle">ResNet50</text>
+  <text x="655" y="142" text-anchor="middle">ecovision-trashnet/1</text>
+  <text x="655" y="180" text-anchor="middle" font-style="italic" font-size="11">(modelo alojado)</text>
+  <line x1="210" y1="110" x2="278" y2="110" stroke="#334155" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="278" y1="140" x2="210" y2="140" stroke="#334155" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="490" y1="110" x2="558" y2="110" stroke="#334155" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="558" y1="140" x2="490" y2="140" stroke="#334155" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="244" y="100" text-anchor="middle" font-size="11">/api/*</text>
+  <text x="524" y="100" text-anchor="middle" font-size="11">Bearer</text>
+  <text x="385" y="20" text-anchor="middle" font-size="11" fill="#475569">La clave de Roboflow solo existe en el backend (variable de entorno)</text>
+</svg>
+
+    <p class="nota"><i>Nota.</i> Elaboración propia. Las flechas indican el sentido de las solicitudes HTTPS.</p>
+  </div>
+
+  <h3>Backend y API REST</h3>
+  <p>El backend (Python 3.12, FastAPI 0.165.0, Pydantic 2.14.4) expone cinco endpoints con contratos tipados y documentación OpenAPI/Swagger generada automáticamente (Tabla 4). Las respuestas de error tienen un formato uniforme con un código y un mensaje en español.</p>
+
+  <div class="tabla">
+    <p class="num">Tabla 4</p>
+    <p class="tit">Endpoints de la API</p>
+    <table>
+      <thead><tr><th class="izq">Método y ruta</th><th class="izq">Función</th></tr></thead>
+      <tbody>
+        <tr><td><code>GET /api/health</code></td><td class="izq">Estado del servicio, si el modelo está configurado y los límites vigentes</td></tr>
+        <tr><td><code>GET /api/model/info</code></td><td class="izq">Información del modelo leída de un registro de entrenamiento real</td></tr>
+        <tr><td><code>POST /api/predict</code></td><td class="izq">Clasifica una imagen y devuelve las seis probabilidades</td></tr>
+        <tr><td><code>POST /api/predict/batch</code></td><td class="izq">Clasifica hasta 20 imágenes; un fallo no detiene el resto</td></tr>
+        <tr><td><code>POST /api/evaluate</code></td><td class="izq">Recibe imágenes y un CSV <code>filename,true_label</code> y devuelve todas las métricas</td></tr>
+      </tbody>
+    </table>
+    <p class="nota"><i>Nota.</i> Documentación interactiva en <code>/docs</code>. Los límites (tamaño máximo de 5 MB por imagen, 20 imágenes por lote y 500 por evaluación) son configurables.</p>
+  </div>
+
+  <p>Las entradas se validan en capas: extensión (JPG, JPEG, PNG o WEBP), tamaño, contenido real de la imagen (se abre con Pillow, sin confiar en la extensión), número de píxeles (contra imágenes malformadas de tamaño desproporcionado) y número de archivos. Las imágenes se procesan en memoria y no se almacenan. Se configuraron orígenes CORS explícitos (el modo de producción rechaza comodines), cabeceras de seguridad básicas y tiempos de espera en toda llamada externa, con un único reintento ante errores transitorios del proveedor. El registro de eventos no incluye URLs ni mensajes de excepciones de la biblioteca HTTP, y una prueba automatizada verifica que la clave no aparezca en errores ni en registros. Si el modelo no está configurado, la API responde con un error 503 explícito en lugar de devolver una predicción simulada.</p>
+
+  <h3>Interfaz de usuario</h3>
+  <p>La interfaz (React 19.3.1, TypeScript 6.0.3, Vite 8.3.8, Tailwind CSS 4.3.5, Recharts 3.11.0 y Axios) está íntegramente en español y es responsiva. Tiene cinco módulos, accesibles desde una barra lateral con indicador del estado del servicio:</p>
+  <ul>
+    <li><b>Inicio</b> (Figura 4): descripción, contexto, objetivo, las seis categorías, funcionamiento y acceso al clasificador.</li>
+    <li><b>Clasificador</b> (Figura 5): carga de una imagen con validación inmediata y vista previa, categoría predicha, porcentaje de confianza, barras con las seis probabilidades y un aviso cuando la confianza es baja (menor de 60 %).</li>
+    <li><b>Procesamiento por lotes</b> (Figura 6): tabla con archivo, categoría y confianza, estado del procesamiento, lista de archivos fallidos y exportación a CSV.</li>
+    <li><b>Evaluación</b> (Figura 7): carga de imágenes etiquetadas y un CSV, comprobación previa de coincidencias, y tablas y gráficos con exactitud, precisión, recall y F1 por clase y promedios macro y ponderado, matriz de confusión, curvas ROC con AUC y curvas PR con AP; exportación de métricas y predicciones.</li>
+    <li><b>Acerca del modelo</b> (Figura 8): datos del modelo, conjunto, configuración, métricas y limitaciones, leídos de la API; los campos sin dato se muestran como <i>Pendiente</i> y nunca se inventan.</li>
+  </ul>
+  <p>El módulo de evaluación responde al requisito de que el usuario cargue conjuntos de datos y obtenga resultados: acepta hasta 500 imágenes con su etiqueta real, relaciona cada imagen con su fila del CSV, ejecuta el modelo y calcula las métricas. Para comprobar que la aplicación es fiel al análisis científico, se evaluaron las 379 imágenes de prueba a través de la interfaz y se obtuvieron los mismos valores que con el <i>script</i> (exactitud 88,65 %, F1 macro 0,856, AUC macro 0,980).</p>
+
+  <div class="figura">
+    <p class="num">Figura 4</p>
+    <p class="tit">Módulo Inicio</p>
+    <img class="ancha" src="../evidence/app_01_inicio.png" alt="Captura del módulo Inicio">
+    <p class="nota"><i>Nota.</i> Captura de la aplicación en ejecución local.</p>
+  </div>
+  <div class="figura">
+    <p class="num">Figura 5</p>
+    <p class="tit">Módulo Clasificador con una predicción real</p>
+    <img class="ancha" src="../evidence/app_05_clasificador_resultado.png" alt="Captura del clasificador">
+    <p class="nota"><i>Nota.</i> Imagen <code>plastic117.jpg</code> del conjunto de validación, clasificada por el modelo alojado en Roboflow: plástico con 78,5 % de confianza. Las clases con menos de ~1 % de probabilidad son estimadas.</p>
+  </div>
+  <div class="figura">
+    <p class="num">Figura 6</p>
+    <p class="tit">Módulo de procesamiento por lotes con un archivo inválido</p>
+    <img class="ancha" src="../evidence/app_03_lotes.png" alt="Captura del procesamiento por lotes">
+    <p class="nota"><i>Nota.</i> Seis imágenes de validación y un archivo corrupto con extensión .jpg, que el servidor rechazó y la interfaz informó por separado sin detener el lote.</p>
+  </div>
+  <div class="figura">
+    <p class="num">Figura 7</p>
+    <p class="tit">Módulo de evaluación con el conjunto de prueba completo</p>
+    <img class="ancha" src="fig/app_evaluacion_parte1.png" alt="Captura de la evaluación">
+    <p class="nota"><i>Nota.</i> Parte superior del módulo tras evaluar las 379 imágenes de prueba a través de la aplicación. Se muestra el resumen, la advertencia sobre probabilidades estimadas y la tabla de métricas.</p>
+  </div>
+  <div class="figura">
+    <p class="num">Figura 8</p>
+    <p class="tit">Módulo Acerca del modelo</p>
+    <img class="media" src="../evidence/app_02_modelo.png" alt="Captura de la información del modelo">
+    <p class="nota"><i>Nota.</i> Captura previa a la evaluación final: la sección de métricas se actualizó después con los resultados sobre el conjunto de prueba.</p>
+  </div>
+
+  <h3>Calidad, pruebas y reproducibilidad</h3>
+  <p>El proyecto incluye 100 pruebas automatizadas (Tabla 5). Las del backend usan un clasificador falso <i>solo dentro de las pruebas</i> y un transporte HTTP simulado para el adaptador de Roboflow, de modo que el servicio real nunca contiene una vía simulada. Las pruebas de métricas comparan con valores calculados a mano (por ejemplo, un AUC de 7/8 en un caso mínimo) y verifican que la curva ROC usa probabilidades y no etiquetas predichas, y las de la interfaz cubren validación de archivos, exportación a CSV segura frente a inyección de fórmulas, mapeo de errores y el flujo de clasificación con éxito, error y confianza baja. El código backend pasa el análisis estático con Ruff y el modo estricto de mypy, y el frontend pasa la verificación de tipos y ESLint.</p>
+
+  <div class="tabla">
+    <p class="num">Tabla 5</p>
+    <p class="tit">Pruebas automatizadas del proyecto</p>
+    <table>
+      <thead><tr><th class="izq">Componente</th><th>Pruebas</th><th class="izq">Qué verifican</th></tr></thead>
+      <tbody>
+        <tr><td>Backend (API y adaptador)</td><td>55</td><td class="izq">Éxito, errores, entradas inválidas, límites, CORS, seguridad de la clave</td></tr>
+        <tr><td>Evaluación y particiones</td><td>20</td><td class="izq">Métricas con valores calculados a mano; ausencia de fuga de datos</td></tr>
+        <tr><td>Frontend</td><td>25</td><td class="izq">Validación, CSV, errores de red, flujo del clasificador</td></tr>
+        <tr><td><b>Total</b></td><td><b>100</b></td><td></td></tr>
+      </tbody>
+    </table>
+    <p class="nota"><i>Nota.</i> Resultados de la ejecución previa a la emisión de este documento (commit <code>29c0a02</code>).</p>
+  </div>
+
+  <h3>Empaquetado y publicación</h3>
+  <p>El backend se empaqueta en una imagen de Docker con un usuario sin privilegios; la imagen se construyó y se ejecutó localmente en modo producción con la clave real, y se comprobó el estado del servicio, la lectura del registro del modelo, una predicción real, una evaluación con scikit-learn dentro del contenedor y el rechazo de orígenes CORS no permitidos, con un consumo de memoria de unos 148 MiB. El repositorio incluye la configuración para publicar el backend en Render y el frontend en Vercel. Render documenta que los servicios gratuitos se suspenden tras 15 minutos sin tráfico y tardan cerca de un minuto en reactivarse (Render, s. f.), un detalle relevante para una demostración.</p>
+  <p><b>Estado de la publicación.</b> El modelo está desplegado y es accesible por API en Roboflow. La aplicación web se verificó en ejecución local y en contenedor, y su configuración de publicación en Render y Vercel está preparada, pero al emitir este documento no se había publicado; las direcciones públicas se incorporan al completarla.</p>
+</div>
+
+<div>
+  <h2>Evaluación del Modelo</h2>
+  <h3>Protocolo</h3>
+  <p>La evaluación final se realizó una sola vez, con el modelo ya elegido, sobre las 379 imágenes del conjunto de prueba, que no había intervenido en ninguna decisión. Las predicciones se obtuvieron de la API real y las métricas se calcularon con scikit-learn (Pedregosa et al., 2011) en el paquete propio del proyecto. Las curvas ROC y PR se construyen con las probabilidades por clase bajo el esquema uno contra el resto, nunca con las etiquetas predichas, y los intervalos de confianza del 95 % se estimaron con <i>bootstrap</i> de 2000 remuestreos. La ejecución quedó registrada en una bitácora de usos del conjunto de prueba.</p>
+
+  <h3>Resultados globales</h3>
+  <p>El modelo alcanzó una exactitud de 88,65 % (IC 95 %: 85,49 % a 91,82 %), un F1 macro de 0,856 y un F1 ponderado de 0,887. El AUC macro aproximado fue de 0,980 (IC 95 %: 0,964 a 0,993) y el AP macro de 0,918. Como se anticipó, la exactitud de prueba es inferior a la de validación (93,65 %); la diferencia es coherente con el hecho de que la validación se usó para seleccionar el mejor punto del entrenamiento, lo que la vuelve optimista, mientras que la prueba es una estimación insesgada del desempeño con imágenes nuevas del mismo dominio.</p>
+
+  <h3>Resultados por categoría</h3>
+  <p>La Tabla 6 presenta las métricas por categoría. Cinco de las seis clases superan un F1 de 0,87. La clase otros residuos es, con claridad, la más difícil (F1 = 0,619, AP = 0,706), un resultado esperable: es la minoritaria (20 imágenes de prueba) y la más heterogénea, pues agrupa objetos sin una apariencia común. Sus intervalos de confianza son los más anchos, reflejo del tamaño de muestra.</p>
+
+  <div class="tabla">
+    <p class="num">Tabla 6</p>
+    <p class="tit">Métricas por categoría en el conjunto de prueba</p>
+    <table><thead><tr><th class="izq">Categoría</th><th>Precisión</th><th>Recall</th><th>F1 [IC 95 %]</th><th>AUC</th><th>AP</th><th><i>n</i></th></tr></thead><tbody><tr><td>Cartón</td><td>0,853</td><td>0,967</td><td>0,906 [0,85; 0,95]</td><td>0,995</td><td>0,973</td><td>60</td></tr><tr><td>Vidrio</td><td>0,905</td><td>0,893</td><td>0,899 [0,84; 0,95]</td><td>0,982</td><td>0,971</td><td>75</td></tr><tr><td>Metal</td><td>0,915</td><td>0,885</td><td>0,900 [0,84; 0,95]</td><td>0,991</td><td>0,931</td><td>61</td></tr><tr><td>Papel</td><td>0,906</td><td>0,846</td><td>0,875 [0,82; 0,92]</td><td>0,977</td><td>0,936</td><td>91</td></tr><tr><td>Plástico</td><td>0,944</td><td>0,931</td><td>0,937 [0,89; 0,97]</td><td>0,997</td><td>0,988</td><td>72</td></tr><tr><td>Otros residuos</td><td>0,591</td><td>0,650</td><td>0,619 [0,41; 0,78]</td><td>0,940</td><td>0,706</td><td>20</td></tr><tr><td><b>Macro</b></td><td><b>0,852</b></td><td><b>0,862</b></td><td><b>0,856 [0,81; 0,90]</b></td><td><b>0,980</b></td><td><b>0,918</b></td><td><b>379</b></td></tr><tr><td><b>Ponderado</b></td><td><b>0,889</b></td><td><b>0,887</b></td><td><b>0,887</b></td><td><b>—</b></td><td><b>—</b></td><td><b>379</b></td></tr></tbody></table>
+    <p class="nota"><i>Nota.</i> <i>n</i> = 379. Entre corchetes, el intervalo de confianza del 95 % del F1 por <i>bootstrap</i>. AUC y AP son aproximados por la estimación de probabilidades omitidas (Tabla 8). Promedios calculados sobre las seis clases.</p>
+  </div>
+
+  <h3>Matriz de confusión y confusiones frecuentes</h3>
+  <p>La matriz de confusión (Figura 9) muestra una diagonal dominante. La confusión más frecuente es <i>papel clasificado como cartón</i> (9 imágenes, el 9,9 % de la clase papel), lo que resulta razonable porque ambos materiales pueden compartir color y textura; entre los errores de mayor confianza (Figura 13) figuran cajas de cartón blanco y una pieza gris de aspecto cartonado etiquetadas como papel. Le siguen, con cuatro imágenes cada una, metal clasificado como otros residuos y otros residuos clasificados como papel, consistentes con la heterogeneidad de esa clase. La Tabla 7 lista las confusiones más frecuentes.</p>
+
+  <div class="figura">
+    <p class="num">Figura 9</p>
+    <p class="tit">Matriz de confusión en el conjunto de prueba</p>
+    <img class="ancha" src="fig/matriz_confusion.png" alt="Matriz de confusión">
+    <p class="nota"><i>Nota.</i> Izquierda, conteos; derecha, proporción por clase real (las filas suman 1). La diagonal corresponde a los aciertos.</p>
+  </div>
+
+  <div class="tabla">
+    <p class="num">Tabla 7</p>
+    <p class="tit">Confusiones más frecuentes en el conjunto de prueba</p>
+    <table><thead><tr><th class="izq">Clase real</th><th>Clase predicha</th><th>Imágenes</th><th>% de la clase real</th></tr></thead><tbody><tr><td>Papel</td><td>Cartón</td><td>9</td><td>9,9 %</td></tr><tr><td>Metal</td><td>Otros residuos</td><td>4</td><td>6,6 %</td></tr><tr><td>Otros residuos</td><td>Papel</td><td>4</td><td>20,0 %</td></tr><tr><td>Vidrio</td><td>Metal</td><td>3</td><td>4,0 %</td></tr><tr><td>Vidrio</td><td>Plástico</td><td>3</td><td>4,0 %</td></tr><tr><td>Metal</td><td>Vidrio</td><td>3</td><td>4,9 %</td></tr></tbody></table>
+    <p class="nota"><i>Nota.</i> Porcentaje respecto al total de imágenes de la clase real.</p>
+  </div>
+
+  <h3>Curvas ROC y Precision-Recall</h3>
+  <p>Las curvas ROC (Figura 10) se acercan a la esquina superior izquierda en todas las clases, con AUC entre 0,940 y 0,997. Las curvas PR (Figura 11) matizan ese panorama para la clase minoritaria: mientras su AUC es alta (0,940), su AP es mucho menor (0,706), lo que confirma que en problemas desbalanceados la curva PR es más informativa que la ROC (Saito y Rehmsmeier, 2015). Dicho de otro modo, el modelo ordena bien las imágenes de otros residuos frente a las demás, pero mantener alta la precisión de esa clase a la vez que su exhaustividad es difícil.</p>
+
+  <div class="figura">
+    <p class="num">Figura 10</p>
+    <p class="tit">Curvas ROC uno contra el resto (conjunto de prueba)</p>
+    <img class="estrecha" src="fig/roc.png" alt="Curvas ROC">
+    <p class="nota"><i>Nota.</i> AUC macro aproximado = 0,980. La diagonal representa un clasificador aleatorio.</p>
+  </div>
+  <div class="figura">
+    <p class="num">Figura 11</p>
+    <p class="tit">Curvas Precision-Recall uno contra el resto (conjunto de prueba)</p>
+    <img class="estrecha" src="fig/pr.png" alt="Curvas Precision-Recall">
+    <p class="nota"><i>Nota.</i> AP macro = 0,918. La clase otros residuos queda por debajo del resto.</p>
+  </div>
+
+  <h3>Calibración de la confianza</h3>
+  <p>El diagrama de fiabilidad (Figura 12) y el error de calibración esperado (ECE = 0,064) muestran que el modelo es <i>sobreconfiado</i>: su confianza media (94,8 %) supera a su exactitud (88,65 %), un comportamiento habitual en redes profundas modernas (Guo et al., 2017). Esto tiene una consecuencia práctica para la interfaz: un porcentaje de confianza alto no equivale a la misma probabilidad de acierto, por lo que se presenta como una medida orientativa y no como una probabilidad calibrada.</p>
+  <div class="figura">
+    <p class="num">Figura 12</p>
+    <p class="tit">Diagrama de fiabilidad en el conjunto de prueba</p>
+    <img class="estrecha" src="fig/fiabilidad.png" alt="Diagrama de fiabilidad">
+    <p class="nota"><i>Nota.</i> Cada punto es un intervalo de confianza; el número indica cuántas imágenes contiene. La diagonal es la calibración perfecta. ECE = 0,064.</p>
+  </div>
+
+  <h3>Umbral de confianza baja y análisis de errores</h3>
+  <p>El aviso de confianza baja (umbral de 60 %) marcó 13 de las 379 imágenes. Entre las marcadas, la exactitud cae a 23,1 %, frente a 91,0 % en las no marcadas, y el aviso captura 10 de los 43 errores totales. El umbral funciona como filtro útil, aunque la mayoría de los errores ocurren con confianza alta, lo que concuerda con la sobreconfianza observada. La inspección de los errores de mayor confianza (Figura 13) muestra casos genuinamente ambiguos: fragmentos de vidrio que parecen metálicos por el brillo, cajas de cartón blanco que parecen papel y envolturas de la clase otros residuos con aspecto de papel o plástico.</p>
+  <div class="figura">
+    <p class="num">Figura 13</p>
+    <p class="tit">Errores de mayor confianza en el conjunto de prueba</p>
+    <img class="ancha" src="fig/errores.png" alt="Errores de mayor confianza">
+    <p class="nota"><i>Nota.</i> Doce errores ordenados por confianza decreciente, con la etiqueta real y la predicha.</p>
+  </div>
+
+  <h3>Robustez de las métricas aproximadas</h3>
+  <p>Para cuantificar el efecto de estimar las probabilidades omitidas por el proveedor, se recalcularon el AUC y el AP con el método principal (reparto del residuo) y con un relleno de ceros (Tabla 8). La exactitud y el F1 son idénticos con ambos métodos. El AUC macro varía 0,002 y el AP macro 0,004 entre los dos métodos, diferencias pequeñas que no alteran las conclusiones pero que justifican reportar estas áreas como aproximadas.</p>
+  <div class="tabla">
+    <p class="num">Tabla 8</p>
+    <p class="tit">Sensibilidad de las métricas de área al método de estimación</p>
+    <table><thead><tr><th class="izq">Métrica</th><th>Residuo repartido</th><th>Relleno con ceros</th><th>Diferencia</th></tr></thead><tbody><tr><td>AUC macro</td><td>0,9805</td><td>0,9785</td><td>0,0020</td></tr><tr><td>AP macro</td><td>0,9176</td><td>0,9137</td><td>0,0039</td></tr><tr><td>AUC cartón</td><td>0,9950</td><td>0,9950</td><td>0,0000</td></tr><tr><td>AUC vidrio</td><td>0,9823</td><td>0,9875</td><td>0,0052</td></tr><tr><td>AUC metal</td><td>0,9914</td><td>0,9854</td><td>0,0060</td></tr><tr><td>AUC papel</td><td>0,9775</td><td>0,9734</td><td>0,0040</td></tr><tr><td>AUC plástico</td><td>0,9967</td><td>0,9967</td><td>0,0000</td></tr><tr><td>AUC otros residuos</td><td>0,9401</td><td>0,9329</td><td>0,0072</td></tr></tbody></table>
+    <p class="nota"><i>Nota.</i> En el conjunto de prueba, 376 de 379 imágenes tuvieron al menos una clase omitida por el proveedor.</p>
+  </div>
+
+  <h2>Discusión</h2>
+  <p>El modelo alcanza un desempeño alto y equilibrado en cinco de las seis categorías, con un AUC macro cercano a la unidad, y sus errores se concentran en fronteras semánticamente razonables (papel frente a cartón) y en la clase más heterogénea y escasa. Esta última es también la de peor desempeño en el trabajo original sobre TrashNet: con una máquina de vectores de soporte, Yang y Thung (2016) reportaron una exactitud de prueba de 63 % (partición 70/30) y, para la clase otros residuos, una precisión de 0,24 y un <i>recall</i> de 0,35. El repositorio de los autores indica además cerca de 75 % de exactitud con una red convolucional tras ajustar la inicialización de pesos (partición 70/13/17; Thung y Yang, s. f.). La exactitud de 88,65 % de este trabajo es superior, pero no es directamente comparable: cambian el modelo, las particiones, la depuración de duplicados y la plataforma de entrenamiento, que probablemente parte de pesos preentrenados (dato que la interfaz no confirma). Lo que sí es coherente con el curso es que, con pocos datos, apoyarse en una arquitectura profunda probada resulta eficaz (Espejo, s. f.-e).</p>
+  <p>Tres hallazgos metodológicos merecen destacarse. Primero, el aumento de datos no produjo una mejora distinguible del azar, lo que recuerda que es una herramienta cuyo beneficio depende de los datos y no un ingrediente que mejore siempre. Segundo, la brecha entre validación y prueba ilustra por qué la selección de modelo y la estimación final del desempeño deben hacerse sobre conjuntos distintos. Tercero, la sobreconfianza del modelo confirma, en un caso concreto, la observación de Guo et al. (2017) y es la razón por la que la aplicación trata la confianza como orientativa.</p>
+
+  <h2>Limitaciones</h2>
+  <ul>
+    <li><b>Dominio de las imágenes.</b> TrashNet contiene un solo objeto sobre fondo claro; el desempeño puede bajar con escenas reales, varios objetos, otros fondos o iluminaciones distintas. El sistema no debe trasladarse a esas condiciones sin volver a evaluarlo.</li>
+    <li><b>Clase minoritaria.</b> Otros residuos tiene pocos ejemplos y es heterogénea; sus métricas son las más bajas y las de mayor incertidumbre.</li>
+    <li><b>Probabilidades incompletas.</b> El proveedor omite las clases con probabilidad menor a ~1 %, por lo que el AUC, el AP y las curvas son aproximados. Calcular el softmax completo con los pesos descargados eliminaría esta aproximación, a costa de apartarse del modelo desplegado.</li>
+    <li><b>Transparencia del entrenamiento.</b> La plataforma no expone todos los hiperparámetros ni el punto de partida de los pesos, lo que limita la reproducibilidad exacta del entrenamiento (sí es reproducible la preparación de datos y la evaluación).</li>
+    <li><b>Alcance de la comparación.</b> Solo se compararon dos modelos con la misma arquitectura; no se exploraron ViT, DINOv3 ni ajustes de hiperparámetros.</li>
+    <li><b>Calibración.</b> Las confianzas no están calibradas; no deben interpretarse como probabilidades de acierto.</li>
+  </ul>
+
+  <h2>Conclusiones</h2>
+  <p>Se implementó y evaluó EcoVision IA, un sistema que clasifica el material aparente de una imagen en seis categorías con un modelo ResNet50 entrenado y alojado en Roboflow y consumido por una aplicación web propia a través de una API. Sobre un conjunto de prueba independiente de 379 imágenes, el modelo obtuvo una exactitud de 88,65 %, un F1 macro de 0,856 y un AUC macro aproximado de 0,980, con un desempeño sólido en cinco categorías y dificultades concentradas en la clase minoritaria y heterogénea.</p>
+  <p>Más allá de las cifras, el trabajo cumple los objetivos planteados: un conjunto de datos preparado de forma reproducible y sin fuga; un modelo entrenado, comparado y seleccionado con un criterio fijado de antemano; un despliegue real mediante API con las credenciales protegidas; una aplicación funcional con clasificación individual, por lotes y evaluación; y una evaluación estadística completa, interpretada con honestidad sobre sus límites. Como trabajo futuro se plantea ampliar y equilibrar la clase otros residuos, comparar otras arquitecturas, calibrar las probabilidades y validar el sistema con imágenes propias del entorno de uso.</p>
+</div>
+
+<div class="salto refs">
+  <h1>Referencias</h1>
+  <p>Efron, B., y Tibshirani, R. J. (1993). <i>An introduction to the bootstrap</i>. Chapman &amp; Hall.</p>
+  <p>Espejo, A. (s. f.-a). <i>Algoritmos de visión por computador</i> [Material de curso]. Curso Visión por Computador.</p>
+  <p>Espejo, A. (s. f.-b). <i>Aplicaciones y desafíos actuales en visión por computador</i> [Material de curso]. Curso Visión por Computador.</p>
+  <p>Espejo, A. (s. f.-c). <i>Fundamentos de redes neuronales convolucionales (CNN)</i> [Material de curso]. Curso Visión por Computador.</p>
+  <p>Espejo, A. (s. f.-d). <i>Introducción a la visión por computador y estructura de una imagen</i> [Material de curso]. Curso Visión por Computador.</p>
+  <p>Espejo, A. (s. f.-e). <i>Técnicas de entrenamiento y optimización para modelos de visión por computador</i> [Material de curso]. Curso Visión por Computador.</p>
+  <p>Fawcett, T. (2006). An introduction to ROC analysis. <i>Pattern Recognition Letters, 27</i>(8), 861–874. https://doi.org/10.1016/j.patrec.2005.10.010</p>
+  <p>Guo, C., Pleiss, G., Sun, Y., y Weinberger, K. Q. (2017). On calibration of modern neural networks. En <i>Proceedings of the 34th International Conference on Machine Learning</i> (Vol. 70, pp. 1321–1330). PMLR. https://proceedings.mlr.press/v70/guo17a.html</p>
+  <p>He, K., Zhang, X., Ren, S., y Sun, J. (2016). Deep residual learning for image recognition. En <i>2016 IEEE Conference on Computer Vision and Pattern Recognition (CVPR)</i> (pp. 770–778). IEEE. https://doi.org/10.1109/CVPR.2016.90</p>
+  <p>McNemar, Q. (1947). Note on the sampling error of the difference between correlated proportions or percentages. <i>Psychometrika, 12</i>(2), 153–157. https://doi.org/10.1007/BF02295996</p>
+  <p>Pan, S. J., y Yang, Q. (2010). A survey on transfer learning. <i>IEEE Transactions on Knowledge and Data Engineering, 22</i>(10), 1345–1359. https://doi.org/10.1109/TKDE.2009.191</p>
+  <p>Pedregosa, F., Varoquaux, G., Gramfort, A., Michel, V., Thirion, B., Grisel, O., Blondel, M., Prettenhofer, P., Weiss, R., Dubourg, V., Vanderplas, J., Passos, A., Cournapeau, D., Brucher, M., Perrot, M., y Duchesnay, É. (2011). Scikit-learn: Machine learning in Python. <i>Journal of Machine Learning Research, 12</i>, 2825–2830.</p>
+  <p>Render. (s. f.). <i>Deploy for free</i>. Render Docs. Recuperado el 23 de noviembre de 2026, de https://render.com/docs/free</p>
+  <p>Roboflow. (s. f.-a). <i>Inference</i>. En <i>Roboflow API reference</i> [Documentación]. GitHub. Recuperado el 23 de noviembre de 2026, de https://github.com/roboflow/computer-vision-skills/blob/main/skills/roboflow-api-reference/inference.md</p>
+  <p>Roboflow. (s. f.-b). <i>Roboflow training and evaluation</i> [Documentación]. GitHub. Recuperado el 23 de noviembre de 2026, de https://github.com/roboflow/computer-vision-skills/blob/main/skills/roboflow-training-and-evaluation/SKILL.md</p>
+  <p>Roboflow. (s. f.-c). <i>Upload a dataset</i>. Roboflow Docs. Recuperado el 23 de noviembre de 2026, de https://docs.roboflow.com/nl_NL/get-started/uploading-classification-datasets</p>
+  <p>Saito, T., y Rehmsmeier, M. (2015). The precision-recall plot is more informative than the ROC plot when evaluating binary classifiers on imbalanced datasets. <i>PLOS ONE, 10</i>(3), Artículo e0118432. https://doi.org/10.1371/journal.pone.0118432</p>
+  <p>Shorten, C., y Khoshgoftaar, T. M. (2019). A survey on image data augmentation for deep learning. <i>Journal of Big Data, 6</i>, Artículo 60. https://doi.org/10.1186/s40537-019-0197-0</p>
+  <p>Thung, G., y Yang, M. (s. f.). <i>TrashNet</i> [Conjunto de datos]. GitHub. https://github.com/garythung/trashnet</p>
+  <p>Yang, M., y Thung, G. (2016). <i>Classification of trash for recyclability status</i> [Informe de proyecto, CS229]. Stanford University. https://cs229.stanford.edu/proj2016/report/ThungYang-ClassificationOfTrashForRecyclabilityStatus-report.pdf</p>
+</div>
+
+<div class="anexo-titulo">
+  <h1>Anexo A</h1>
+  <h1>Trazabilidad entre los Requisitos de la Actividad y la Evidencia</h1>
+  <p class="sin-sangria">La Tabla A1 relaciona cada paso solicitado en la actividad con el lugar del documento y con los archivos del repositorio que permiten verificarlo. Repositorio: https://github.com/FrankOrtegon/ecovision-ia.</p>
+  <div class="tabla">
+    <p class="num">Tabla A1</p>
+    <p class="tit">Requisitos de la actividad y evidencia asociada</p>
+    <table>
+      <thead><tr><th class="izq">Requisito</th><th class="izq">Sección</th><th class="izq">Evidencia verificable</th></tr></thead>
+      <tbody>
+        <tr><td>Contexto y área de aplicación</td><td class="izq">Introducción; Contexto y Área de Aplicación</td><td class="izq"><code>docs/requirements.md</code>; módulo Inicio</td></tr>
+        <tr><td>Selección y preparación del conjunto de datos</td><td class="izq">Selección y Preparación del Conjunto de Datos</td><td class="izq"><code>ml/scripts/01</code>–<code>04</code>; <code>ml/results/dataset_summary.json</code>, <code>split_summary.json</code>, <code>splits/*.csv</code>; <code>tests/test_dataset_splits.py</code></td></tr>
+        <tr><td>Entrenamiento y ajustes</td><td class="izq">Entrenamiento del Modelo</td><td class="izq"><code>ml/results/training_log.json</code>; <code>docs/training.md</code>; <code>eval_val_v1</code> y <code>eval_val_v2</code></td></tr>
+        <tr><td>Despliegue accesible por API</td><td class="izq">Despliegue del Modelo</td><td class="izq">Modelo <code>ecovision-trashnet/1</code> en Roboflow; <code>backend/app/integrations/roboflow.py</code></td></tr>
+        <tr><td>Aplicación con interfaz amigable e integración por API</td><td class="izq">Creación de la Aplicación</td><td class="izq"><code>backend/</code>, <code>frontend/</code>; Figuras 4–8; pruebas automatizadas</td></tr>
+        <tr><td>Carga de datos por el usuario y resultados</td><td class="izq">Interfaz de usuario</td><td class="izq">Módulos Clasificador, Lotes y Evaluación</td></tr>
+        <tr><td>Precisión, recall, F1, ROC y AUC</td><td class="izq">Evaluación del Modelo</td><td class="izq"><code>ml/results/eval_test_v1/</code> (<code>metrics.json</code>, <code>classification_report.txt</code>, <code>predictions.csv</code>, gráficos)</td></tr>
+        <tr><td>Análisis y documentación de resultados</td><td class="izq">Evaluación; Discusión; Limitaciones</td><td class="izq"><code>extra_analysis.json</code>; <code>docs/evaluation.md</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h1>Anexo B</h1>
+  <h1>Reproducibilidad</h1>
+  <p class="sin-sangria">Todo el análisis puede reproducirse desde el repositorio (commit <code>29c0a02</code>, generado el 23 de noviembre de 2026). Los pasos, desde la raíz del proyecto con Python 3.12, son:</p>
+  <ul>
+    <li>Entorno: crear el entorno virtual e instalar <code>ml/evaluation</code> y <code>backend</code>.</li>
+    <li>Datos: ejecutar en orden <code>ml/scripts/01_download_dataset.py</code>, <code>02_explore_dataset.py</code>, <code>03_split_dataset.py</code> y <code>04_prepare_roboflow_upload.py</code> (semilla 42).</li>
+    <li>Evaluación: <code>05_run_evaluation.py</code> (validación con <code>--split val</code>; prueba solo con <code>--final</code>) y <code>06_analyze_results.py</code>.</li>
+    <li>Figuras e informe: <code>docs/informe/make_figures.py</code> y <code>docs/informe/build_informe.py</code>, que leen los resultados guardados y generan este documento.</li>
+  </ul>
+  <p class="sin-sangria">El entrenamiento en Roboflow no es reproducible de forma exacta con la información que expone la plataforma (véase Limitaciones); sí lo son la preparación de datos, la evaluación y la aplicación.</p>
+
+  <h1>Anexo C</h1>
+  <h1>Incidencias y Decisiones del Proceso</h1>
+  <ul>
+    <li><b>Duplicados con etiquetas contradictorias.</b> Se detectaron durante la exploración y se excluyeron antes de particionar.</li>
+    <li><b>Visibilidad del conjunto de prueba.</b> Roboflow muestra por defecto sus evaluaciones automáticas sobre el conjunto de prueba. Se vieron en pantalla para ambos modelos, no se usaron para decidir y la selección se hizo con la validación. El script de evaluación exige una bandera explícita para tocar la prueba y registra cada uso.</li>
+    <li><b>Exposición de una credencial.</b> Una clave de API se compartió por error en una conversación y quedó escrita en un archivo de plantilla versionado de un repositorio público. La clave se revocó, se comprobó que la anterior devolvía un error 401 y que la nueva funcionaba, y desde entonces se revisa el <i>contenido</i> de los archivos antes de publicar.</li>
+    <li><b>Cambio de cliente HTTP.</b> El diseño inicial usaba el SDK de Roboflow; se pasó a llamadas HTTP directas para fijar el tiempo de espera por solicitud y paralelizar. La llamada sigue aislada en un único módulo.</li>
+  </ul>
+</div>
+</body></html>

@@ -1,0 +1,80 @@
+<div>
+  <h2>Selección y Preparación del Conjunto de Datos</h2>
+  <h3>Selección y procedencia</h3>
+  <p>Se seleccionó TrashNet (Yang y Thung, 2016), un conjunto público de fotografías de un único objeto sobre una cartulina blanca, tomadas con tres teléfonos móviles y organizadas en seis clases: vidrio, papel, cartón, plástico, metal y otros residuos (<i>trash</i>). Se eligió porque es abierto (el repositorio declara licencia MIT), porque corresponde exactamente al problema de clasificación de material y porque es lo bastante pequeño para reproducirse en un equipo personal. Se descargó la versión redimensionada (<code>dataset-resized.zip</code>, [[zip_mb]] MB) del repositorio de los autores (Thung y Yang, s. f.) el [[fecha_descarga]], y se registró su huella SHA-256 para garantizar la trazabilidad.</p>
+
+  <h3>Exploración</h3>
+  <p>El script de exploración abrió y verificó cada archivo con Pillow. Las [[n_total]] imágenes resultaron íntegras: todas son JPEG en modo RGB de 512 × 384 píxeles, con tamaños de archivo entre [[kb_min]] y [[kb_max]] kB. Los conteos por clase coinciden con los publicados por los autores. La Figura 1 muestra el desequilibrio: la clase mayoritaria (papel) tiene [[ratio]] veces más imágenes que la minoritaria (otros residuos, [[trash_pct]] del total). La Figura 2 ofrece cinco ejemplos aleatorios por clase (semilla 42); se observa la homogeneidad del fondo y la heterogeneidad interna de la clase otros residuos, que reúne envolturas, servilletas y espuma.</p>
+
+  <div class="figura">
+    <p class="num">Figura 1</p>
+    <p class="tit">Distribución de las imágenes por categoría y partición</p>
+    <img class="media" src="fig/distribucion.png" alt="Distribución por categoría">
+    <p class="nota"><i>Nota.</i> Las barras apiladas muestran las imágenes usadas en cada partición; el número sobre cada barra es el total original de la clase. Elaboración propia con <code>02_explore_dataset.py</code> y <code>03_split_dataset.py</code>.</p>
+  </div>
+
+  <div class="figura">
+    <p class="num">Figura 2</p>
+    <p class="tit">Ejemplos aleatorios de cada categoría</p>
+    <img class="media" src="fig/ejemplos.png" alt="Ejemplos por categoría">
+    <p class="nota"><i>Nota.</i> Cinco imágenes por clase seleccionadas al azar (semilla 42). Fuente: TrashNet (Yang y Thung, 2016).</p>
+  </div>
+
+  <h3>Integridad y duplicados</h3>
+  <p>Se buscaron duplicados exactos (hash SHA-256) y casi exactos (hash perceptual con distancia de Hamming ≤ 2). Aparecieron [[dup_groups]] pares de imágenes con contenido idéntico byte a byte pero <i>etiquetas contradictorias</i> (por ejemplo, la misma fotografía etiquetada como vidrio y como metal). Como su etiqueta verdadera es indeterminable, se excluyeron las [[n_excl]] imágenes implicadas, quedando [[n_used]] imágenes. Los pares casi idénticos no se eliminaron, porque el hash perceptual produce falsos positivos con fondos blancos; en cambio, los [[groups]] grupos conectados que formaron se asignaron completos a una sola partición, de modo que ninguna fotografía casi repetida pueda estar a la vez en entrenamiento y en prueba.</p>
+
+  <h3>Particiones</h3>
+  <p>Las imágenes se dividieron en entrenamiento (70 %), validación (15 %) y prueba (15 %) mediante una partición estratificada por clase con semilla 42, tratando cada grupo de casi duplicados como una unidad indivisible. Las particiones se exportaron a archivos CSV y la ausencia de fuga se verifica con pruebas automatizadas (sin nombres ni huellas compartidas entre particiones, grupos no divididos, proporciones del 70/15/15 con tolerancia del 1 % y estratificación con diferencia máxima de 2 puntos porcentuales por clase). El conjunto de prueba no se usó para ninguna decisión de diseño. La Tabla 1 resume el resultado.</p>
+
+  <div class="tabla">
+    <p class="num">Tabla 1</p>
+    <p class="tit">Imágenes por categoría y partición</p>
+    [[tbl_dataset]]
+    <p class="nota"><i>Nota.</i> Total tras excluir [[n_excl]] imágenes con etiquetas contradictorias. Porcentajes de la partición sobre el total: entrenamiento [[pct_train]], validación [[pct_val]], prueba [[pct_test]].</p>
+  </div>
+
+  <h3>Carga en la plataforma</h3>
+  <p>Se generó una estructura de carpetas <code>train/valid/test</code> con una subcarpeta por clase, que Roboflow interpreta como la división y la etiqueta de cada imagen (Roboflow, s. f.-c). Al importar se eligió la opción de respetar los valores existentes, y se comprobó en la plataforma que los conteos por clase y por partición coincidían con la Tabla 1. El aumento de datos se aplicó únicamente sobre el conjunto de entrenamiento; las particiones de validación y prueba no se modificaron.</p>
+
+  <h2>Entrenamiento del Modelo</h2>
+  <h3>Plataforma y configuración</h3>
+  <p>Se usó Roboflow para entrenar y alojar el modelo. La plataforma ofrece, para clasificación de una sola etiqueta, las arquitecturas ResNet (18, 34, 50 y 101 capas), ViT y DINOv3 (Roboflow, s. f.-b). Se eligió ResNet50 por ser una arquitectura de referencia para la transferencia de aprendizaje (He et al., 2016; Espejo, s. f.-e) y porque la plataforma la ofrece con un costo de entrenamiento bajo. Ambas versiones del conjunto usan el mismo preprocesamiento (orientación automática y redimensionamiento a 224 × 224 con estiramiento) y los hiperparámetros por defecto de la plataforma (hasta 300 épocas); la interfaz de Roboflow solo muestra el número máximo de épocas y no informa el punto de partida de los pesos, por lo que el resto no se puede documentar (véase Limitaciones). Se entrenó una línea base sin aumento de datos y una segunda versión con aumento en línea, para que la <i>única</i> diferencia entre ambas fuera el aumento (Tabla 2).</p>
+
+  <div class="tabla">
+    <p class="num">Tabla 2</p>
+    <p class="tit">Configuración de los dos entrenamientos</p>
+    <table>
+      <thead><tr><th class="izq">Elemento</th><th>Modelo 1 (línea base)</th><th>Modelo 2 (con aumento)</th></tr></thead>
+      <tbody>
+        <tr><td>Versión del conjunto</td><td>v1-baseline-sin-aumento</td><td>v2-aumento-en-linea</td></tr>
+        <tr><td>Arquitectura</td><td>ResNet50</td><td>ResNet50</td></tr>
+        <tr><td>Entrada</td><td>224 × 224</td><td>224 × 224</td></tr>
+        <tr><td>Imágenes (train/valid/test)</td><td>1764 / 378 / 379</td><td>1764 / 378 / 379</td></tr>
+        <tr><td>Aumento en línea (solo entrenamiento)</td><td>Ninguno</td><td>Volteo horizontal y vertical; rotación ±15°; brillo ±15 %; exposición ±10 %</td></tr>
+        <tr><td>Hiperparámetros</td><td>Por defecto</td><td>Por defecto</td></tr>
+        <tr><td>Épocas ejecutadas</td><td>28 (curvas de 0 a 27)</td><td>No registradas</td></tr>
+        <tr><td>Créditos de la plataforma</td><td>0,17</td><td>No registrados</td></tr>
+      </tbody>
+    </table>
+    <p class="nota"><i>Nota.</i> Datos tomados de la receta de entrenamiento que muestra Roboflow y de <code>ml/results/training_log.json</code>. Las probabilidades de aplicación del aumento fueron 100 % (volteo) y 50 % (rotación, brillo y exposición).</p>
+  </div>
+
+  <p>Los aumentos se eligieron con criterio de dominio (Shorten y Khoshgoftaar, 2019; Espejo, s. f.-e). Las fotografías se toman desde arriba con el objeto apoyado, por lo que no existe una orientación canónica y los volteos y las rotaciones pequeñas son seguros. Se descartaron los cambios de tono, saturación y escala de grises porque el color ayuda a distinguir categorías como cartón o plástico.</p>
+
+  <h3>Curvas de entrenamiento</h3>
+  <p>En el modelo 1 la exactitud de validación subió de aproximadamente 72 % en la época 0 a cerca de 90 % hacia la época 6, alcanzó un máximo cercano a 93,6 % en la época 15 y terminó en torno a 89,7 % en la última época (valores leídos de la gráfica de Roboflow, por lo que son aproximados). La pérdida de entrenamiento presentó picos repetidos de hasta aproximadamente 1,4, señal de un entrenamiento inestable. La exactitud de validación del modelo desplegado calculada después (0,9365; Tabla 3) coincide con el máximo de la curva, lo que indica que la plataforma conserva el mejor punto del entrenamiento. Esa selección del mejor punto con la validación tiene una consecuencia metodológica que se retoma en la evaluación: la exactitud de validación es una estimación optimista.</p>
+
+  <h3>Comparación y selección</h3>
+  <p>Antes de mirar el conjunto de prueba se fijó la regla de selección: elegir con las métricas de validación calculadas por el módulo propio de evaluación y, ante diferencias no significativas, preferir el modelo más simple. Ambos modelos se evaluaron sobre las [[n_val]] imágenes de validación con el mismo código que usa la aplicación (Tabla 3).</p>
+
+  <div class="tabla">
+    <p class="num">Tabla 3</p>
+    <p class="tit">Comparación de los dos modelos en el conjunto de validación</p>
+    [[tbl_validation]]
+    <p class="nota"><i>Nota.</i> <i>n</i> = [[n_val]]. AUC y AP son aproximados (véase la sección de despliegue). El F1 de otros residuos se calcula con solo [[n_val_trash]] imágenes.</p>
+  </div>
+
+  <p>El modelo 1 obtuvo valores ligeramente superiores en todas las métricas, pero la diferencia no es distinguible del azar: el modelo 1 acertó [[only_v1]] imágenes que el modelo 2 falló y el modelo 2 acertó [[only_v2]] que el modelo 1 falló (prueba exacta de McNemar, 1947, <i>p</i> = [[mcnemar_p]]); la diferencia de exactitud fue de [[acc_diff]] puntos, con un intervalo de confianza del 95 % por <i>bootstrap</i> (Efron y Tibshirani, 1993) de [[diff_ci]], que incluye el cero. Se seleccionó, por tanto, el <b>modelo 1</b> (sin aumento), identificado como <code>ecovision-trashnet/1</code>.</p>
+  <p>Una interpretación prudente es que el aumento de datos no redujo el sobreajuste de forma apreciable en este conjunto. Con una pérdida de entrenamiento inestable y 21 imágenes de validación de la clase minoritaria, las diferencias entre ambos modelos están dentro del ruido de muestreo; no se exploraron otras arquitecturas ni hiperparámetros, decisión consciente de acotar el alcance.</p>
+  <p>Durante el proceso, la plataforma mostró en pantalla sus evaluaciones automáticas sobre el conjunto de prueba de ambos modelos. Esas cifras (con umbrales de confianza distintos, 34 % y 65 %) no se usaron para decidir, no son comparables entre sí y se declaran aquí por transparencia. La evaluación oficial sobre prueba se ejecutó una sola vez, después de elegir el modelo.</p>
+</div>

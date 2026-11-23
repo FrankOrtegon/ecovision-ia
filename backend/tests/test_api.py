@@ -33,13 +33,13 @@ def test_health_publishes_limits_for_the_frontend(client: TestClient) -> None:
     }
 
 
-def test_model_info_reports_selected_model_without_claiming_test_metrics(client: TestClient) -> None:
+def test_model_info_reports_selected_model_and_official_metrics(client: TestClient) -> None:
     j = client.get("/api/model/info").json()
     assert j["status"] == "ready" and j["model_id"] == "ecovision-trashnet/1"
     assert j["classes"] == CLASSES
-    assert "Validación" in j["metrics"]["Conjunto evaluado"]
-    # Las métricas sobre test no se publican hasta ejecutar la evaluación final.
-    assert "Pendientes" in j["metrics"]["Métricas sobre el conjunto de prueba"]
+    assert "prueba" in j["metrics"]["Evaluación oficial"]
+    assert j["metrics"]["Accuracy (prueba)"] == 0.8865
+    assert j["metrics"]["Accuracy en validación (usada para elegir el modelo)"] == 0.9365
     assert j["trained_at"] == "2026-11-22"
 
 

@@ -1,0 +1,96 @@
+<div>
+  <h2>Evaluación del Modelo</h2>
+  <h3>Protocolo</h3>
+  <p>La evaluación final se realizó una sola vez, con el modelo ya elegido, sobre las [[n_test]] imágenes del conjunto de prueba, que no había intervenido en ninguna decisión. Las predicciones se obtuvieron de la API real y las métricas se calcularon con scikit-learn (Pedregosa et al., 2011) en el paquete propio del proyecto. Las curvas ROC y PR se construyen con las probabilidades por clase bajo el esquema uno contra el resto, nunca con las etiquetas predichas, y los intervalos de confianza del 95 % se estimaron con <i>bootstrap</i> de 2000 remuestreos. La ejecución quedó registrada en una bitácora de usos del conjunto de prueba.</p>
+
+  <h3>Resultados globales</h3>
+  <p>El modelo alcanzó una exactitud de [[acc_test]] (IC 95 %: [[acc_ci]]), un F1 macro de [[f1_macro]] y un F1 ponderado de [[f1_weighted]]. El AUC macro aproximado fue de [[auc_macro]] (IC 95 %: [[auc_ci]]) y el AP macro de [[ap_macro]]. Como se anticipó, la exactitud de prueba es inferior a la de validación ([[acc_val]]); la diferencia es coherente con el hecho de que la validación se usó para seleccionar el mejor punto del entrenamiento, lo que la vuelve optimista, mientras que la prueba es una estimación insesgada del desempeño con imágenes nuevas del mismo dominio.</p>
+
+  <h3>Resultados por categoría</h3>
+  <p>La Tabla 6 presenta las métricas por categoría. Cinco de las seis clases superan un F1 de 0,87. La clase otros residuos es, con claridad, la más difícil (F1 = [[f1_trash]], AP = [[ap_trash]]), un resultado esperable: es la minoritaria ([[n_test_trash]] imágenes de prueba) y la más heterogénea, pues agrupa objetos sin una apariencia común. Sus intervalos de confianza son los más anchos, reflejo del tamaño de muestra.</p>
+
+  <div class="tabla">
+    <p class="num">Tabla 6</p>
+    <p class="tit">Métricas por categoría en el conjunto de prueba</p>
+    [[tbl_percls]]
+    <p class="nota"><i>Nota.</i> <i>n</i> = [[n_test]]. Entre corchetes, el intervalo de confianza del 95 % del F1 por <i>bootstrap</i>. AUC y AP son aproximados por la estimación de probabilidades omitidas (Tabla 8). Promedios calculados sobre las seis clases.</p>
+  </div>
+
+  <h3>Matriz de confusión y confusiones frecuentes</h3>
+  <p>La matriz de confusión (Figura 9) muestra una diagonal dominante. La confusión más frecuente es <i>papel clasificado como cartón</i> ([[conf1_n]] imágenes, el [[conf1_pct]] de la clase papel), lo que resulta razonable porque ambos materiales pueden compartir color y textura; entre los errores de mayor confianza (Figura 13) figuran cajas de cartón blanco y una pieza gris de aspecto cartonado etiquetadas como papel. Le siguen, con cuatro imágenes cada una, metal clasificado como otros residuos y otros residuos clasificados como papel, consistentes con la heterogeneidad de esa clase. La Tabla 7 lista las confusiones más frecuentes.</p>
+
+  <div class="figura">
+    <p class="num">Figura 9</p>
+    <p class="tit">Matriz de confusión en el conjunto de prueba</p>
+    <img class="ancha" src="fig/matriz_confusion.png" alt="Matriz de confusión">
+    <p class="nota"><i>Nota.</i> Izquierda, conteos; derecha, proporción por clase real (las filas suman 1). La diagonal corresponde a los aciertos.</p>
+  </div>
+
+  <div class="tabla">
+    <p class="num">Tabla 7</p>
+    <p class="tit">Confusiones más frecuentes en el conjunto de prueba</p>
+    [[tbl_conf]]
+    <p class="nota"><i>Nota.</i> Porcentaje respecto al total de imágenes de la clase real.</p>
+  </div>
+
+  <h3>Curvas ROC y Precision-Recall</h3>
+  <p>Las curvas ROC (Figura 10) se acercan a la esquina superior izquierda en todas las clases, con AUC entre [[auc_min]] y [[auc_max]]. Las curvas PR (Figura 11) matizan ese panorama para la clase minoritaria: mientras su AUC es alta ([[auc_trash]]), su AP es mucho menor ([[ap_trash]]), lo que confirma que en problemas desbalanceados la curva PR es más informativa que la ROC (Saito y Rehmsmeier, 2015). Dicho de otro modo, el modelo ordena bien las imágenes de otros residuos frente a las demás, pero mantener alta la precisión de esa clase a la vez que su exhaustividad es difícil.</p>
+
+  <div class="figura">
+    <p class="num">Figura 10</p>
+    <p class="tit">Curvas ROC uno contra el resto (conjunto de prueba)</p>
+    <img class="estrecha" src="fig/roc.png" alt="Curvas ROC">
+    <p class="nota"><i>Nota.</i> AUC macro aproximado = [[auc_macro]]. La diagonal representa un clasificador aleatorio.</p>
+  </div>
+  <div class="figura">
+    <p class="num">Figura 11</p>
+    <p class="tit">Curvas Precision-Recall uno contra el resto (conjunto de prueba)</p>
+    <img class="estrecha" src="fig/pr.png" alt="Curvas Precision-Recall">
+    <p class="nota"><i>Nota.</i> AP macro = [[ap_macro]]. La clase otros residuos queda por debajo del resto.</p>
+  </div>
+
+  <h3>Calibración de la confianza</h3>
+  <p>El diagrama de fiabilidad (Figura 12) y el error de calibración esperado (ECE = [[ece]]) muestran que el modelo es <i>sobreconfiado</i>: su confianza media ([[conf_media]]) supera a su exactitud ([[acc_test]]), un comportamiento habitual en redes profundas modernas (Guo et al., 2017). Esto tiene una consecuencia práctica para la interfaz: un porcentaje de confianza alto no equivale a la misma probabilidad de acierto, por lo que se presenta como una medida orientativa y no como una probabilidad calibrada.</p>
+  <div class="figura">
+    <p class="num">Figura 12</p>
+    <p class="tit">Diagrama de fiabilidad en el conjunto de prueba</p>
+    <img class="estrecha" src="fig/fiabilidad.png" alt="Diagrama de fiabilidad">
+    <p class="nota"><i>Nota.</i> Cada punto es un intervalo de confianza; el número indica cuántas imágenes contiene. La diagonal es la calibración perfecta. ECE = [[ece]].</p>
+  </div>
+
+  <h3>Umbral de confianza baja y análisis de errores</h3>
+  <p>El aviso de confianza baja (umbral de 60 %) marcó [[low_n]] de las [[n_test]] imágenes. Entre las marcadas, la exactitud cae a [[low_acc_flag]], frente a [[low_acc_ok]] en las no marcadas, y el aviso captura [[low_caught]] de los [[low_errors]] errores totales. El umbral funciona como filtro útil, aunque la mayoría de los errores ocurren con confianza alta, lo que concuerda con la sobreconfianza observada. La inspección de los errores de mayor confianza (Figura 13) muestra casos genuinamente ambiguos: fragmentos de vidrio que parecen metálicos por el brillo, cajas de cartón blanco que parecen papel y envolturas de la clase otros residuos con aspecto de papel o plástico.</p>
+  <div class="figura">
+    <p class="num">Figura 13</p>
+    <p class="tit">Errores de mayor confianza en el conjunto de prueba</p>
+    <img class="ancha" src="fig/errores.png" alt="Errores de mayor confianza">
+    <p class="nota"><i>Nota.</i> Doce errores ordenados por confianza decreciente, con la etiqueta real y la predicha.</p>
+  </div>
+
+  <h3>Robustez de las métricas aproximadas</h3>
+  <p>Para cuantificar el efecto de estimar las probabilidades omitidas por el proveedor, se recalcularon el AUC y el AP con el método principal (reparto del residuo) y con un relleno de ceros (Tabla 8). La exactitud y el F1 son idénticos con ambos métodos. El AUC macro varía [[auc_sens]] y el AP macro [[ap_sens]] entre los dos métodos, diferencias pequeñas que no alteran las conclusiones pero que justifican reportar estas áreas como aproximadas.</p>
+  <div class="tabla">
+    <p class="num">Tabla 8</p>
+    <p class="tit">Sensibilidad de las métricas de área al método de estimación</p>
+    [[tbl_sens]]
+    <p class="nota"><i>Nota.</i> En el conjunto de prueba, [[n_test_est]] de [[n_test]] imágenes tuvieron al menos una clase omitida por el proveedor.</p>
+  </div>
+
+  <h2>Discusión</h2>
+  <p>El modelo alcanza un desempeño alto y equilibrado en cinco de las seis categorías, con un AUC macro cercano a la unidad, y sus errores se concentran en fronteras semánticamente razonables (papel frente a cartón) y en la clase más heterogénea y escasa. Esta última es también la de peor desempeño en el trabajo original sobre TrashNet: con una máquina de vectores de soporte, Yang y Thung (2016) reportaron una exactitud de prueba de 63 % (partición 70/30) y, para la clase otros residuos, una precisión de 0,24 y un <i>recall</i> de 0,35. El repositorio de los autores indica además cerca de 75 % de exactitud con una red convolucional tras ajustar la inicialización de pesos (partición 70/13/17; Thung y Yang, s. f.). La exactitud de [[acc_test]] de este trabajo es superior, pero no es directamente comparable: cambian el modelo, las particiones, la depuración de duplicados y la plataforma de entrenamiento, que probablemente parte de pesos preentrenados (dato que la interfaz no confirma). Lo que sí es coherente con el curso es que, con pocos datos, apoyarse en una arquitectura profunda probada resulta eficaz (Espejo, s. f.-e).</p>
+  <p>Tres hallazgos metodológicos merecen destacarse. Primero, el aumento de datos no produjo una mejora distinguible del azar, lo que recuerda que es una herramienta cuyo beneficio depende de los datos y no un ingrediente que mejore siempre. Segundo, la brecha entre validación y prueba ilustra por qué la selección de modelo y la estimación final del desempeño deben hacerse sobre conjuntos distintos. Tercero, la sobreconfianza del modelo confirma, en un caso concreto, la observación de Guo et al. (2017) y es la razón por la que la aplicación trata la confianza como orientativa.</p>
+
+  <h2>Limitaciones</h2>
+  <ul>
+    <li><b>Dominio de las imágenes.</b> TrashNet contiene un solo objeto sobre fondo claro; el desempeño puede bajar con escenas reales, varios objetos, otros fondos o iluminaciones distintas. El sistema no debe trasladarse a esas condiciones sin volver a evaluarlo.</li>
+    <li><b>Clase minoritaria.</b> Otros residuos tiene pocos ejemplos y es heterogénea; sus métricas son las más bajas y las de mayor incertidumbre.</li>
+    <li><b>Probabilidades incompletas.</b> El proveedor omite las clases con probabilidad menor a ~1 %, por lo que el AUC, el AP y las curvas son aproximados. Calcular el softmax completo con los pesos descargados eliminaría esta aproximación, a costa de apartarse del modelo desplegado.</li>
+    <li><b>Transparencia del entrenamiento.</b> La plataforma no expone todos los hiperparámetros ni el punto de partida de los pesos, lo que limita la reproducibilidad exacta del entrenamiento (sí es reproducible la preparación de datos y la evaluación).</li>
+    <li><b>Alcance de la comparación.</b> Solo se compararon dos modelos con la misma arquitectura; no se exploraron ViT, DINOv3 ni ajustes de hiperparámetros.</li>
+    <li><b>Calibración.</b> Las confianzas no están calibradas; no deben interpretarse como probabilidades de acierto.</li>
+  </ul>
+
+  <h2>Conclusiones</h2>
+  <p>Se implementó y evaluó EcoVision IA, un sistema que clasifica el material aparente de una imagen en seis categorías con un modelo ResNet50 entrenado y alojado en Roboflow y consumido por una aplicación web propia a través de una API. Sobre un conjunto de prueba independiente de [[n_test]] imágenes, el modelo obtuvo una exactitud de [[acc_test]], un F1 macro de [[f1_macro]] y un AUC macro aproximado de [[auc_macro]], con un desempeño sólido en cinco categorías y dificultades concentradas en la clase minoritaria y heterogénea.</p>
+  <p>Más allá de las cifras, el trabajo cumple los objetivos planteados: un conjunto de datos preparado de forma reproducible y sin fuga; un modelo entrenado, comparado y seleccionado con un criterio fijado de antemano; un despliegue real mediante API con las credenciales protegidas; una aplicación funcional con clasificación individual, por lotes y evaluación; y una evaluación estadística completa, interpretada con honestidad sobre sus límites. Como trabajo futuro se plantea ampliar y equilibrar la clase otros residuos, comparar otras arquitecturas, calibrar las probabilidades y validar el sistema con imágenes propias del entorno de uso.</p>
+</div>

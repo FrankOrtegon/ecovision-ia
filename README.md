@@ -10,15 +10,15 @@ Clasifica el **material aparente** de una imagen en seis categorías de TrashNet
 |---|---|
 | 1. Requisitos, arquitectura, estructura | Completa |
 | 2. Dataset | Completa |
-| 3. Entrenamiento en Roboflow | Pendiente (requiere pasos manuales) |
-| 4. Evaluación | Módulo listo; falta la ejecución sobre el conjunto de prueba |
-| 5. Backend | Implementado y probado con dobles; falta probar con el modelo real |
+| 3. Entrenamiento en Roboflow | Completa (modelo `ecovision-trashnet/1` seleccionado) |
+| 4. Evaluación | Completa (exactitud 0,8865, F1 macro 0,856, AUC macro aprox. 0,980 en prueba) |
+| 5. Backend | Completa (100 pruebas en total; verificado con el modelo real y en contenedor Docker) |
 | 6. Frontend | Implementado y probado contra el backend y el modelo reales (prueba de humo local) |
-| 7. Integración | Pendiente |
-| 8. Despliegue | Pendiente |
-| 9. Evidencias | Pendiente |
+| 7. Integración | Completa en local (extremo a extremo con el modelo real) |
+| 8. Despliegue | Modelo en Roboflow; app lista para Render y Vercel (publicación pendiente) |
+| 9. Evidencias | Informe APA 7 listo (`docs/Informe_EcoVision_IA.pdf`); falta el video |
 
-Los resultados del modelo se publican aquí solo después de ejecutarse.
+Todas las cifras provienen de ejecuciones reales (`ml/results/`). Informe final: `docs/Informe_EcoVision_IA.pdf`.
 
 ## Estructura
 

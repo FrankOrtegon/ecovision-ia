@@ -1,0 +1,18 @@
+# Blueprint de Render para el backend. Los secretos se definen en el panel, no aquí.
+services:
+  - type: web
+    name: ecovision-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: ROBOFLOW_MODEL_ID
+        value: ecovision-trashnet/1
+      - key: ROBOFLOW_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false

@@ -1,0 +1,16 @@
+[
+  {
+    "at_utc": "2026-11-23T03:24:00+00:00",
+    "model_id": "ecovision-trashnet/1",
+    "resolved": [
+      "franks-workspace-2rfjw/ecovision-trashnet-1-resnet50-t1"
+    ],
+    "tag": "v1"
+  },
+  {
+    "at_utc": "2026-11-23",
+    "via": "aplicación web (POST /api/evaluate)",
+    "model_id": "ecovision-trashnet/1",
+    "note": "Reproducción con el mismo modelo y los mismos datos para verificar que la aplicación calcula las mismas métricas que el script (accuracy 0,8865, F1 macro 0,856, AUC macro 0,980). No se usó para ninguna decisión."
+  }
+]

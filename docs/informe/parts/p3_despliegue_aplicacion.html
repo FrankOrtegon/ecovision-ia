@@ -1,0 +1,102 @@
+<div>
+  <h2>Despliegue del Modelo</h2>
+  <p>El modelo seleccionado se aloja en la infraestructura de Roboflow y se consume mediante su API de inferencia sin servidor (<i>serverless</i>; Roboflow, s. f.-a). La solicitud es un <code>POST</code> a <code>https://serverless.roboflow.com/{proyecto}/{versión}</code> con la imagen codificada en base64 y la clave de la cuenta en la cabecera <code>Authorization: Bearer</code>; en este proyecto el identificador es <code>ecovision-trashnet/1</code>. Mediante llamadas reales se comprobó que ese identificador resuelve al modelo entrenado <code>ecovision-trashnet-1-resnet50-t1</code> y que el identificador <code>ecovision-trashnet/2</code> resuelve al segundo modelo, lo que permitió compararlos sin ambigüedad. La respuesta de clasificación contiene, para cada clase devuelta, su nombre y su confianza, además de la mejor clase.</p>
+  <p>La verificación empírica del comportamiento del servicio reveló un hecho con consecuencias para la evaluación: <b>aun con el umbral de confianza en cero, la API omite las clases cuya probabilidad es inferior a aproximadamente 1 %</b>. En una imagen de plástico, por ejemplo, devolvió cinco de las seis clases, con una suma de 0,9948, y omitió la clase metal. Como la suma de las probabilidades es conocida, el sistema estima las clases omitidas repartiendo el residuo (1 menos la suma) entre ellas y marca cada respuesta con un indicador de estimación. La exactitud, la precisión, el recall y el F1 no dependen de esta estimación, porque usan la clase de mayor probabilidad; las curvas ROC y PR y sus áreas sí, y por eso se reportan como aproximadas y se acompañan de un análisis de sensibilidad (Tabla 8).</p>
+  <p>La latencia de la API que informa Roboflow es de milisegundos (3,5 ms en la ficha del modelo 1, tiempo de servidor sin red). Medida de extremo a extremo desde la aplicación, una clasificación individual tarda entre [[lat_min]] y [[lat_max]] ms según la red, y la evaluación de las [[n_test]] imágenes de prueba a través de la aplicación tardó [[seg_eval]] segundos con cuatro solicitudes en paralelo.</p>
+
+  <h2>Creación de la Aplicación</h2>
+  <h3>Arquitectura</h3>
+  <p>La aplicación sigue una arquitectura de tres capas con separación de responsabilidades (Figura 3). El navegador ejecuta una aplicación de una sola página en React que solo se comunica con el backend; el backend, escrito en Python con FastAPI, valida las entradas, orquesta las llamadas al modelo alojado y calcula las métricas con scikit-learn mediante un paquete de evaluación independiente que también usan los <i>scripts</i> del proyecto. La clave de Roboflow existe únicamente en el backend (variable de entorno) y nunca llega al navegador.</p>
+
+  <div class="figura">
+    <p class="num">Figura 3</p>
+    <p class="tit">Arquitectura de EcoVision IA</p>
+    [[svg_arquitectura]]
+    <p class="nota"><i>Nota.</i> Elaboración propia. Las flechas indican el sentido de las solicitudes HTTPS.</p>
+  </div>
+
+  <h3>Backend y API REST</h3>
+  <p>El backend (Python [[py_ver]], FastAPI [[v_fastapi]], Pydantic [[v_pydantic]]) expone cinco endpoints con contratos tipados y documentación OpenAPI/Swagger generada automáticamente (Tabla 4). Las respuestas de error tienen un formato uniforme con un código y un mensaje en español.</p>
+
+  <div class="tabla">
+    <p class="num">Tabla 4</p>
+    <p class="tit">Endpoints de la API</p>
+    <table>
+      <thead><tr><th class="izq">Método y ruta</th><th class="izq">Función</th></tr></thead>
+      <tbody>
+        <tr><td><code>GET /api/health</code></td><td class="izq">Estado del servicio, si el modelo está configurado y los límites vigentes</td></tr>
+        <tr><td><code>GET /api/model/info</code></td><td class="izq">Información del modelo leída de un registro de entrenamiento real</td></tr>
+        <tr><td><code>POST /api/predict</code></td><td class="izq">Clasifica una imagen y devuelve las seis probabilidades</td></tr>
+        <tr><td><code>POST /api/predict/batch</code></td><td class="izq">Clasifica hasta [[max_batch]] imágenes; un fallo no detiene el resto</td></tr>
+        <tr><td><code>POST /api/evaluate</code></td><td class="izq">Recibe imágenes y un CSV <code>filename,true_label</code> y devuelve todas las métricas</td></tr>
+      </tbody>
+    </table>
+    <p class="nota"><i>Nota.</i> Documentación interactiva en <code>/docs</code>. Los límites (tamaño máximo de [[max_mb]] MB por imagen, [[max_batch]] imágenes por lote y [[max_eval]] por evaluación) son configurables.</p>
+  </div>
+
+  <p>Las entradas se validan en capas: extensión (JPG, JPEG, PNG o WEBP), tamaño, contenido real de la imagen (se abre con Pillow, sin confiar en la extensión), número de píxeles (contra imágenes malformadas de tamaño desproporcionado) y número de archivos. Las imágenes se procesan en memoria y no se almacenan. Se configuraron orígenes CORS explícitos (el modo de producción rechaza comodines), cabeceras de seguridad básicas y tiempos de espera en toda llamada externa, con un único reintento ante errores transitorios del proveedor. El registro de eventos no incluye URLs ni mensajes de excepciones de la biblioteca HTTP, y una prueba automatizada verifica que la clave no aparezca en errores ni en registros. Si el modelo no está configurado, la API responde con un error 503 explícito en lugar de devolver una predicción simulada.</p>
+
+  <h3>Interfaz de usuario</h3>
+  <p>La interfaz (React [[v_react]], TypeScript [[v_ts]], Vite [[v_vite]], Tailwind CSS [[v_tw]], Recharts [[v_recharts]] y Axios) está íntegramente en español y es responsiva. Tiene cinco módulos, accesibles desde una barra lateral con indicador del estado del servicio:</p>
+  <ul>
+    <li><b>Inicio</b> (Figura 4): descripción, contexto, objetivo, las seis categorías, funcionamiento y acceso al clasificador.</li>
+    <li><b>Clasificador</b> (Figura 5): carga de una imagen con validación inmediata y vista previa, categoría predicha, porcentaje de confianza, barras con las seis probabilidades y un aviso cuando la confianza es baja (menor de 60 %).</li>
+    <li><b>Procesamiento por lotes</b> (Figura 6): tabla con archivo, categoría y confianza, estado del procesamiento, lista de archivos fallidos y exportación a CSV.</li>
+    <li><b>Evaluación</b> (Figura 7): carga de imágenes etiquetadas y un CSV, comprobación previa de coincidencias, y tablas y gráficos con exactitud, precisión, recall y F1 por clase y promedios macro y ponderado, matriz de confusión, curvas ROC con AUC y curvas PR con AP; exportación de métricas y predicciones.</li>
+    <li><b>Acerca del modelo</b> (Figura 8): datos del modelo, conjunto, configuración, métricas y limitaciones, leídos de la API; los campos sin dato se muestran como <i>Pendiente</i> y nunca se inventan.</li>
+  </ul>
+  <p>El módulo de evaluación responde al requisito de que el usuario cargue conjuntos de datos y obtenga resultados: acepta hasta [[max_eval]] imágenes con su etiqueta real, relaciona cada imagen con su fila del CSV, ejecuta el modelo y calcula las métricas. Para comprobar que la aplicación es fiel al análisis científico, se evaluaron las [[n_test]] imágenes de prueba a través de la interfaz y se obtuvieron los mismos valores que con el <i>script</i> (exactitud [[acc_test]], F1 macro [[f1_macro]], AUC macro [[auc_macro]]).</p>
+
+  <div class="figura">
+    <p class="num">Figura 4</p>
+    <p class="tit">Módulo Inicio</p>
+    <img class="ancha" src="../evidence/app_01_inicio.png" alt="Captura del módulo Inicio">
+    <p class="nota"><i>Nota.</i> Captura de la aplicación en ejecución local.</p>
+  </div>
+  <div class="figura">
+    <p class="num">Figura 5</p>
+    <p class="tit">Módulo Clasificador con una predicción real</p>
+    <img class="ancha" src="../evidence/app_05_clasificador_resultado.png" alt="Captura del clasificador">
+    <p class="nota"><i>Nota.</i> Imagen <code>plastic117.jpg</code> del conjunto de validación, clasificada por el modelo alojado en Roboflow: plástico con 78,5 % de confianza. Las clases con menos de ~1 % de probabilidad son estimadas.</p>
+  </div>
+  <div class="figura">
+    <p class="num">Figura 6</p>
+    <p class="tit">Módulo de procesamiento por lotes con un archivo inválido</p>
+    <img class="ancha" src="../evidence/app_03_lotes.png" alt="Captura del procesamiento por lotes">
+    <p class="nota"><i>Nota.</i> Seis imágenes de validación y un archivo corrupto con extensión .jpg, que el servidor rechazó y la interfaz informó por separado sin detener el lote.</p>
+  </div>
+  <div class="figura">
+    <p class="num">Figura 7</p>
+    <p class="tit">Módulo de evaluación con el conjunto de prueba completo</p>
+    <img class="ancha" src="fig/app_evaluacion_parte1.png" alt="Captura de la evaluación">
+    <p class="nota"><i>Nota.</i> Parte superior del módulo tras evaluar las [[n_test]] imágenes de prueba a través de la aplicación. Se muestra el resumen, la advertencia sobre probabilidades estimadas y la tabla de métricas.</p>
+  </div>
+  <div class="figura">
+    <p class="num">Figura 8</p>
+    <p class="tit">Módulo Acerca del modelo</p>
+    <img class="media" src="../evidence/app_02_modelo.png" alt="Captura de la información del modelo">
+    <p class="nota"><i>Nota.</i> Captura previa a la evaluación final: la sección de métricas se actualizó después con los resultados sobre el conjunto de prueba.</p>
+  </div>
+
+  <h3>Calidad, pruebas y reproducibilidad</h3>
+  <p>El proyecto incluye [[n_tests_total]] pruebas automatizadas (Tabla 5). Las del backend usan un clasificador falso <i>solo dentro de las pruebas</i> y un transporte HTTP simulado para el adaptador de Roboflow, de modo que el servicio real nunca contiene una vía simulada. Las pruebas de métricas comparan con valores calculados a mano (por ejemplo, un AUC de 7/8 en un caso mínimo) y verifican que la curva ROC usa probabilidades y no etiquetas predichas, y las de la interfaz cubren validación de archivos, exportación a CSV segura frente a inyección de fórmulas, mapeo de errores y el flujo de clasificación con éxito, error y confianza baja. El código backend pasa el análisis estático con Ruff y el modo estricto de mypy, y el frontend pasa la verificación de tipos y ESLint.</p>
+
+  <div class="tabla">
+    <p class="num">Tabla 5</p>
+    <p class="tit">Pruebas automatizadas del proyecto</p>
+    <table>
+      <thead><tr><th class="izq">Componente</th><th>Pruebas</th><th class="izq">Qué verifican</th></tr></thead>
+      <tbody>
+        <tr><td>Backend (API y adaptador)</td><td>[[n_tests_backend]]</td><td class="izq">Éxito, errores, entradas inválidas, límites, CORS, seguridad de la clave</td></tr>
+        <tr><td>Evaluación y particiones</td><td>[[n_tests_root]]</td><td class="izq">Métricas con valores calculados a mano; ausencia de fuga de datos</td></tr>
+        <tr><td>Frontend</td><td>[[n_tests_front]]</td><td class="izq">Validación, CSV, errores de red, flujo del clasificador</td></tr>
+        <tr><td><b>Total</b></td><td><b>[[n_tests_total]]</b></td><td></td></tr>
+      </tbody>
+    </table>
+    <p class="nota"><i>Nota.</i> Resultados de la ejecución previa a la emisión de este documento (commit <code>[[commit]]</code>).</p>
+  </div>
+
+  <h3>Empaquetado y publicación</h3>
+  <p>El backend se empaqueta en una imagen de Docker con un usuario sin privilegios; la imagen se construyó y se ejecutó localmente en modo producción con la clave real, y se comprobó el estado del servicio, la lectura del registro del modelo, una predicción real, una evaluación con scikit-learn dentro del contenedor y el rechazo de orígenes CORS no permitidos, con un consumo de memoria de unos 148 MiB. El repositorio incluye la configuración para publicar el backend en Render y el frontend en Vercel. Render documenta que los servicios gratuitos se suspenden tras 15 minutos sin tráfico y tardan cerca de un minuto en reactivarse (Render, s. f.), un detalle relevante para una demostración.</p>
+  <p>[[estado_despliegue]]</p>
+</div>

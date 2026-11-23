@@ -25,11 +25,14 @@
   },
   "trained_at": "2026-11-22",
   "metrics": {
-    "Conjunto evaluado": "Validación (378 imágenes), calculado con scikit-learn",
-    "Accuracy": 0.9365,
-    "F1 macro": 0.9168,
-    "AUC macro (aproximada)": 0.9888,
-    "Métricas sobre el conjunto de prueba": "Pendientes: se calcularán una sola vez con el modelo ya elegido"
+    "Evaluación oficial": "Conjunto de prueba (379 imágenes), una sola ejecución con scikit-learn",
+    "Accuracy (prueba)": 0.8865,
+    "Precision macro (prueba)": 0.8523,
+    "Recall macro (prueba)": 0.862,
+    "F1 macro (prueba)": 0.8561,
+    "AUC macro (prueba, aproximada)": 0.9805,
+    "Clase más débil": "Otros residuos (trash), F1 = 0,619 con 20 imágenes de prueba",
+    "Accuracy en validación (usada para elegir el modelo)": 0.9365
   },
   "limitations": [
     "Clasifica el material aparente; no determina si un residuo es reciclable.",
