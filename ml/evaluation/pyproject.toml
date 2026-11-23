@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ecovision-eval"
+version = "0.1.0"
+description = "Métricas de evaluación de clasificación multiclase (scikit-learn) para EcoVision IA"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=1.26",
+  "scikit-learn>=1.5",
+  "matplotlib>=3.9",
+]
+
+[tool.setuptools.packages.find]
+include = ["ecovision_eval*"]

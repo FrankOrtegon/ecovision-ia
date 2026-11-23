@@ -18,15 +18,15 @@ Ordenado por dependencias. Un punto "BLOQUEO MANUAL" detiene solo esa etapa.
 - [x] 2.6 `docs/dataset.md` con cifras reales
 
 ## Fase 3: Entrenamiento en Roboflow
-- [ ] 3.1 Verificar documentación vigente de Roboflow (UI, límites del plan, formatos de carga)
+- [x] 3.1 Verificar documentación vigente de Roboflow (UI, límites del plan, formatos de carga)
 - [ ] 3.2 BLOQUEO MANUAL: crear cuenta/proyecto, subir particiones, entrenar versión base y ajustada. Entregar al agente: workspace, project id, versión, API key en `.env`
 - [ ] 3.3 Registrar `ml/results/training_log.json` y `backend/app/data/model_info.json` con datos reales
 - [ ] 3.4 Llamada de prueba real: confirmar que se devuelven las 6 probabilidades
 - [ ] 3.5 `docs/training.md`
 
 ## Fase 4: Evaluación
-- [ ] 4.1 Paquete `ecovision_eval` (métricas, ROC OvR, AUC, matriz, confusiones, gráficos)
-- [ ] 4.2 Pruebas con casos calculables a mano y clase sin positivos
+- [x] 4.1 Paquete `ecovision_eval` (métricas, ROC OvR, AUC, matriz, confusiones, gráficos; se añadió Precision-Recall y AP por clase, recomendado en RED4 para clases desbalanceadas)
+- [x] 4.2 Pruebas con casos calculables a mano y clase sin positivos (15 pruebas)
 - [ ] 4.3 `05_run_evaluation.py` sobre `test.csv` (una ejecución definitiva)
 - [ ] 4.4 `docs/evaluation.md` con resultados reales y análisis
 
