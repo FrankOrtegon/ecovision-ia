@@ -1,0 +1,27 @@
+# Secretos
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node
+node_modules/
+frontend/dist/
+.vercel/
+
+# Datos (no versionar el dataset completo)
+ml/data/*
+!ml/data/.gitkeep
+*.zip
+
+# Resultados pesados regenerables (los JSON/CSV/PNG de resultados SÍ se versionan)
+.DS_Store
+.ipynb_checkpoints/

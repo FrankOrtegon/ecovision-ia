@@ -1,0 +1,15 @@
+[project]
+name = "ecovision-ml"
+version = "0.1.0"
+description = "Scripts de datos y evaluación de EcoVision IA"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=1.26",
+  "pandas>=2.2",
+  "pillow>=10.3",
+  "scikit-learn>=1.5",
+  "matplotlib>=3.9",
+  "imagehash>=4.3",
+  "requests>=2.32",
+  "pytest>=8.2",
+]
