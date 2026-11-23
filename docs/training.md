@@ -32,7 +32,38 @@ Verificado con llamadas reales el 2026-11-23 usando imágenes de validación:
 - Consecuencia: las probabilidades omitidas se estiman repartiendo el residuo (1 menos la suma) entre las clases que faltan. Cada respuesta lo indica con `estimated_probabilities`. Las curvas ROC y PR de la evaluación son por tanto aproximadas en la cola de probabilidades bajas. En la Fase 4 se cuantificará esa aproximación comparando la estimación por residuo con rellenar con 0.
 - Alternativa descartada por ahora: descargar los pesos y calcular el softmax completo en local. Evitaría la aproximación pero se aparta del modelo desplegado.
 
+## Modelo 2: con aumento de datos en línea
+| Campo | Valor |
+|---|---|
+| Nombre en Roboflow | `ecovision-trashnet-2-resnet50-t1` (dataset `v2-aumento-en-linea`, mismos datos y split que la v1) |
+| Arquitectura | ResNet50 Classification |
+| Aumento en línea (solo train, confirmado en la receta) | Flip horizontal y vertical (prob. 100 %), rotación ±15° (50 %), brillo ±15 % (50 %), exposición ±10 % (50 %) |
+| Hiperparámetros | Por defecto (igual que la v1) |
+| Créditos | No registrados |
+
+La única diferencia con el modelo 1 es el aumento de datos.
+
+## Comparación y selección (solo validación)
+Evaluación con `ml/scripts/05_run_evaluation.py` sobre las 378 imágenes de validación, con el mismo cliente y la misma estimación de probabilidades que el backend. Resultados en `ml/results/eval_val_v1/` y `eval_val_v2/`.
+
+| Métrica (validación) | v1 sin aumento | v2 con aumento |
+|---|---|---|
+| Accuracy | 0,9365 | 0,9286 |
+| Precision macro | 0,9168 | 0,9006 |
+| Recall macro | 0,9175 | 0,8937 |
+| F1 macro | 0,9168 | 0,8966 |
+| AUC macro (aproximada) | 0,9888 | 0,9852 |
+| AP macro (aproximada) | 0,9429 | 0,9301 |
+| F1 de `trash` (21 imágenes) | 0,762 | 0,650 |
+
+Comparación pareada: v1 acierta 13 imágenes que v2 falla y v2 acierta 10 que v1 falla (McNemar exacto, p = 0,678). La diferencia de accuracy v1 − v2 es +0,0079, con intervalo de confianza del 95 % por bootstrap de [−0,016, +0,032], que incluye el cero.
+
+**Decisión (2026-11-23):** no hay evidencia de que el aumento de datos mejore el modelo, así que se conserva el **modelo 1 (`ecovision-trashnet/1`)** por ser más simple. La coincidencia entre la accuracy de validación del modelo 1 (0,9365) y el máximo de su curva (~93,6 %, época 15) indica que Roboflow desplegó el mejor punto del entrenamiento.
+
+Interpretación: el aumento de datos no redujo el sobreajuste de forma apreciable en este conjunto. Con una pérdida de entrenamiento inestable y solo 21 imágenes de `trash` en validación, las diferencias entre modelos están dentro del ruido de muestreo. No se probó otra arquitectura ni otros hiperparámetros; queda como trabajo futuro.
+
+### Aviso sobre el conjunto de prueba
+Roboflow mostró sus evaluaciones automáticas sobre test para ambos modelos (v1: precision 87,2 %, recall 88,5 %, F1 87,6 % con umbral 34 %; v2: precision 94,6 %, recall 88,0 %, F1 91,0 % con umbral 65 %). Se vieron en pantalla pero **no se usaron para elegir**, y no son comparables entre sí porque usan umbrales distintos y otra definición de métrica. La evaluación oficial sobre test se ejecutará una sola vez con `05_run_evaluation.py --final`; cada ejecución sobre test se registra en `ml/results/test_run_log.json`.
+
 ## Pendiente
-- Versión con aumento de datos (misma arquitectura) y comparación con la línea base usando la validación.
-- Opcional: otra arquitectura (ViT Base o DINOv3) si los créditos alcanzan.
-- Registrar la versión seleccionada en `backend/app/data/model_info.json`.
+- Evaluación final sobre el conjunto de prueba con el modelo elegido (Fase 4).

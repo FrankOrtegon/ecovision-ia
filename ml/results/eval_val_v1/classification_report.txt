@@ -1,0 +1,14 @@
+clase        precision    recall        f1   soporte
+cardboard       0.9677    1.0000    0.9836        60
+glass           0.9487    0.9867    0.9673        75
+metal           0.9355    0.9355    0.9355        62
+paper           0.9318    0.9318    0.9318        88
+plastic         0.9552    0.8889    0.9209        72
+trash           0.7619    0.7619    0.7619        21
+
+accuracy                            0.9365       378
+macro           0.9168    0.9175    0.9168       378
+ponderado       0.9365    0.9365    0.9362       378
+
+AUC macro: 0.9888
+AP macro: 0.9429

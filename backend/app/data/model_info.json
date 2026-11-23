@@ -1,20 +1,41 @@
 {
-  "status": "pending_training",
+  "status": "ready",
   "name": "EcoVision IA - clasificador de residuos",
-  "version": null,
-  "model_id": null,
+  "version": "v1-baseline-sin-aumento",
+  "model_id": "ecovision-trashnet/1",
   "dataset": "TrashNet (Thung y Yang), 2521 imágenes usadas tras excluir 6 duplicados con etiquetas contradictorias",
   "dataset_url": "https://github.com/garythung/trashnet",
   "platform": "Roboflow",
-  "architecture": null,
-  "classes": ["cardboard", "glass", "metal", "paper", "plastic", "trash"],
-  "training_config": {},
-  "trained_at": null,
-  "metrics": null,
+  "architecture": "ResNet50 (clasificación de una sola etiqueta)",
+  "classes": [
+    "cardboard",
+    "glass",
+    "metal",
+    "paper",
+    "plastic",
+    "trash"
+  ],
+  "training_config": {
+    "Entrada": "224x224 (stretch)",
+    "Preprocesamiento": "Auto-Orient y Resize",
+    "Aumento de datos": "Ninguno",
+    "Hiperparámetros": "Valores por defecto de Roboflow",
+    "División": "train 1764 / valid 378 / test 379 (semilla 42, estratificada)",
+    "Selección": "Entre dos entrenamientos (sin y con aumento de datos) se eligió el más simple: sin diferencia significativa en validación"
+  },
+  "trained_at": "2026-11-22",
+  "metrics": {
+    "Conjunto evaluado": "Validación (378 imágenes), calculado con scikit-learn",
+    "Accuracy": 0.9365,
+    "F1 macro": 0.9168,
+    "AUC macro (aproximada)": 0.9888,
+    "Métricas sobre el conjunto de prueba": "Pendientes: se calcularán una sola vez con el modelo ya elegido"
+  },
   "limitations": [
     "Clasifica el material aparente; no determina si un residuo es reciclable.",
     "TrashNet tiene fotos de un solo objeto sobre fondo claro; el rendimiento puede bajar con escenas reales, varios objetos u otros fondos.",
-    "La clase 'trash' tiene pocos ejemplos (137 en total), por lo que sus métricas son menos fiables."
+    "La clase 'trash' tiene pocos ejemplos (137 en total, 21 en validación), por lo que sus métricas son menos fiables y las más bajas del modelo.",
+    "El proveedor omite las clases con probabilidad menor a ~1 %; esas probabilidades se estiman, por lo que las curvas ROC y la AUC son aproximadas."
   ],
-  "notes": "Entrenamiento pendiente de registrar. Esta información se completa con datos reales al terminar la Fase 3."
+  "notes": null
 }

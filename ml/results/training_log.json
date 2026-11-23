@@ -46,12 +46,13 @@
         "La pérdida de entrenamiento tiene picos grandes y repetidos (hasta ~1,4).",
         "La accuracy de validación se estanca alrededor de 90-93 % desde la época 6.",
         "La gráfica 'Performance by Class' muestra una clase llamada 'placeholder' que no existe en el dataset. Pendiente de investigar."
-      ]
+      ],
+      "validation_evaluation": "ml/results/eval_val_v1/ (calculada con ml/evaluation sobre las 378 imágenes de validación)"
     },
     {
       "dataset_version": "v2-aumento-en-linea",
       "model_name": "ecovision-trashnet-2-resnet50-t1",
-      "status": "en curso al momento del registro; completar al terminar",
+      "status": "entrenado",
       "architecture": "ResNet50 Classification",
       "version_preprocessing": [
         "Auto-Orient",
@@ -83,8 +84,55 @@
       "hyperparameters": "Default (igual que la v1)",
       "credit_cap": 1,
       "estimated_credits_max": 0.76,
-      "note": "Misma arquitectura, datos y split que la v1; la única diferencia es el aumento de datos en línea."
+      "note": "Misma arquitectura, datos y split que la v1; la única diferencia es el aumento de datos en línea.",
+      "credits_used": "no registrado",
+      "roboflow_auto_evaluation": {
+        "split": "test",
+        "confidence_threshold": "65 % (umbral óptimo que elige Roboflow)",
+        "precision": 0.946,
+        "recall": 0.88,
+        "f1": 0.91,
+        "median_latency_ms": 2.4,
+        "note": "Se vio en pantalla (evaluación automática de Roboflow sobre test). No se usó para elegir modelo y no es comparable con la de la v1, que usa otro umbral (34 %)."
+      },
+      "validation_evaluation": "ml/results/eval_val_v2/ (calculada con ml/evaluation sobre las 378 imágenes de validación)"
     }
   ],
-  "api_key_note": "La clave original se expuso en el chat y fue regenerada el 2026-11-23. La clave vigente vive solo en backend/.env."
+  "api_key_note": "La clave original se expuso en el chat y fue regenerada el 2026-11-23. La clave vigente vive solo en backend/.env.",
+  "selection": {
+    "date": "2026-11-23",
+    "rule": "Elegir con las métricas de validación calculadas por ecovision_eval; ante diferencias no significativas, elegir el modelo más simple. El conjunto de prueba no interviene.",
+    "validation_n": 378,
+    "validation_results": {
+      "v1": {
+        "accuracy": 0.9365,
+        "f1_macro": 0.9168,
+        "auc_macro_approx": 0.9888,
+        "ap_macro_approx": 0.9429
+      },
+      "v2": {
+        "accuracy": 0.9286,
+        "f1_macro": 0.8966,
+        "auc_macro_approx": 0.9852,
+        "ap_macro_approx": 0.9301
+      }
+    },
+    "paired_comparison": {
+      "only_v1_correct": 13,
+      "only_v2_correct": 10,
+      "mcnemar_exact_p": 0.678,
+      "accuracy_diff_v1_minus_v2": 0.0079,
+      "bootstrap_ci95": [
+        -0.0159,
+        0.0317
+      ]
+    },
+    "selected": {
+      "dataset_version": "v1-baseline-sin-aumento",
+      "model_id": "ecovision-trashnet/1",
+      "resolved_model": "franks-workspace-2rfjw/ecovision-trashnet-1-resnet50-t1"
+    },
+    "reason": "Sin diferencia significativa entre v1 y v2 en validación; se conserva el modelo sin aumento por ser más simple.",
+    "test_exposure_disclosure": "Roboflow mostró sus evaluaciones automáticas sobre test para v1 y v2. No influyeron en la elección. La evaluación oficial sobre test aún no se ejecutó (ml/results/test_run_log.json no existe)."
+  }
 }

@@ -1,0 +1,41 @@
+{
+  "method_primary": "residuo (1 - suma) repartido entre las clases omitidas",
+  "method_alternative": "rellenar con 0 las clases omitidas",
+  "images_with_estimated_probabilities": 378,
+  "n_images": 378,
+  "auc_macro": {
+    "residual": 0.9851971423952882,
+    "zero_fill": 0.974301693481651
+  },
+  "ap_macro": {
+    "residual": 0.9301364102850996,
+    "zero_fill": 0.9217574693901143
+  },
+  "auc_per_class": {
+    "cardboard": {
+      "residual": 0.9982180293501048,
+      "zero_fill": 0.9909067085953879
+    },
+    "glass": {
+      "residual": 0.9947194719471948,
+      "zero_fill": 0.9947194719471947
+    },
+    "metal": {
+      "residual": 0.9963760718660677,
+      "zero_fill": 0.9898938342180482
+    },
+    "paper": {
+      "residual": 0.9885579937304075,
+      "zero_fill": 0.9832288401253918
+    },
+    "plastic": {
+      "residual": 0.9827977487291213,
+      "zero_fill": 0.9768972403776327
+    },
+    "trash": {
+      "residual": 0.9505135387488329,
+      "zero_fill": 0.9101640656262505
+    }
+  },
+  "accuracy_identical": true
+}

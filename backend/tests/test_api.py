@@ -33,11 +33,14 @@ def test_health_publishes_limits_for_the_frontend(client: TestClient) -> None:
     }
 
 
-def test_model_info_pending_has_no_invented_numbers(client: TestClient) -> None:
+def test_model_info_reports_selected_model_without_claiming_test_metrics(client: TestClient) -> None:
     j = client.get("/api/model/info").json()
-    assert j["status"] == "pending_training"
-    assert j["metrics"] is None and j["trained_at"] is None and j["version"] is None
+    assert j["status"] == "ready" and j["model_id"] == "ecovision-trashnet/1"
     assert j["classes"] == CLASSES
+    assert "Validación" in j["metrics"]["Conjunto evaluado"]
+    # Las métricas sobre test no se publican hasta ejecutar la evaluación final.
+    assert "Pendientes" in j["metrics"]["Métricas sobre el conjunto de prueba"]
+    assert j["trained_at"] == "2026-11-22"
 
 
 def test_docs_and_openapi_available(client: TestClient) -> None:

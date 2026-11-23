@@ -1,0 +1,16 @@
+{
+  "model_id_requested": "ecovision-trashnet/1",
+  "resolved_models": [
+    "franks-workspace-2rfjw/ecovision-trashnet-1-resnet50-t1"
+  ],
+  "split": "val",
+  "n_images": 378,
+  "split_csv": "ml/results/splits/val.csv",
+  "seed": 42,
+  "provider": "Roboflow Serverless API",
+  "request_confidence_param": 0,
+  "probability_estimation": "residuo (1 - suma) repartido entre las clases omitidas",
+  "evaluated_at_utc": "2026-11-23T02:46:45+00:00",
+  "git_commit": "2cb708193336c332764e677d1e2b1e325cf4a1cd",
+  "final_evaluation": false
+}
