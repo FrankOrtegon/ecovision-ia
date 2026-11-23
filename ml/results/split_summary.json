@@ -1,0 +1,58 @@
+{
+  "seed": 42,
+  "near_duplicate_max_hamming": 2,
+  "images_total_input": 2527,
+  "images_excluded": 6,
+  "images_used": 2521,
+  "groups_with_more_than_one_image": 15,
+  "split_sizes": {
+    "train": 1764,
+    "val": 378,
+    "test": 379
+  },
+  "split_fractions": {
+    "train": 0.6997,
+    "val": 0.1499,
+    "test": 0.1503
+  },
+  "per_class": {
+    "cardboard": {
+      "train": 283,
+      "val": 60,
+      "test": 60
+    },
+    "glass": {
+      "train": 348,
+      "val": 75,
+      "test": 75
+    },
+    "metal": {
+      "train": 286,
+      "val": 62,
+      "test": 61
+    },
+    "paper": {
+      "train": 415,
+      "val": 88,
+      "test": 91
+    },
+    "plastic": {
+      "train": 336,
+      "val": 72,
+      "test": 72
+    },
+    "trash": {
+      "train": 96,
+      "val": 21,
+      "test": 20
+    }
+  },
+  "per_class_fraction_train": {
+    "cardboard": 0.7022,
+    "glass": 0.6988,
+    "metal": 0.6993,
+    "paper": 0.6987,
+    "plastic": 0.7,
+    "trash": 0.7007
+  }
+}

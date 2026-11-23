@@ -10,12 +10,12 @@ Ordenado por dependencias. Un punto "BLOQUEO MANUAL" detiene solo esa etapa.
 - [x] 1.5 Verificación: estructura completa y documentos presentes
 
 ## Fase 2: Dataset
-- [ ] 2.1 `01_download_dataset.py`: descarga TrashNet y registra origen, fecha y hashes. Verificar licencia y forma de distribución (el repositorio ofrece el dataset redimensionado en `dataset-resized.zip`).
-- [ ] 2.2 `02_explore_dataset.py`: conteos, integridad, formatos, dimensiones, duplicados, balance, gráficos, cuadrícula de ejemplos
-- [ ] 2.3 `03_split_dataset.py`: 70/15/15 estratificado, seed 42, sin fuga; CSV
-- [ ] 2.4 Pruebas de fuga y estratificación
-- [ ] 2.5 `04_prepare_roboflow_upload.py`
-- [ ] 2.6 `docs/dataset.md` con cifras reales
+- [x] 2.1 `01_download_dataset.py`: descarga TrashNet y registra origen, fecha y hashes. Verificar licencia y forma de distribución (el repositorio ofrece el dataset redimensionado en `dataset-resized.zip`).
+- [x] 2.2 `02_explore_dataset.py`: conteos, integridad, formatos, dimensiones, duplicados, balance, gráficos, cuadrícula de ejemplos
+- [x] 2.3 `03_split_dataset.py`: 70/15/15 estratificado, seed 42, sin fuga; CSV
+- [x] 2.4 Pruebas de fuga y estratificación
+- [x] 2.5 `04_prepare_roboflow_upload.py`
+- [x] 2.6 `docs/dataset.md` con cifras reales
 
 ## Fase 3: Entrenamiento en Roboflow
 - [ ] 3.1 Verificar documentación vigente de Roboflow (UI, límites del plan, formatos de carga)

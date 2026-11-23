@@ -8,8 +8,8 @@ Clasifica el **material aparente** de una imagen en seis categorías de TrashNet
 
 | Fase | Estado |
 |---|---|
-| 1. Requisitos, arquitectura, estructura | En curso |
-| 2. Dataset | Pendiente |
+| 1. Requisitos, arquitectura, estructura | Completa |
+| 2. Dataset | Completa |
 | 3. Entrenamiento en Roboflow | Pendiente (requiere pasos manuales) |
 | 4. Evaluación | Pendiente |
 | 5. Backend | Pendiente |

@@ -1,0 +1,29 @@
+{
+  "zip": "roboflow_upload.zip",
+  "counts": {
+    "train": {
+      "cardboard": 283,
+      "glass": 348,
+      "metal": 286,
+      "paper": 415,
+      "plastic": 336,
+      "trash": 96
+    },
+    "valid": {
+      "cardboard": 60,
+      "glass": 75,
+      "metal": 62,
+      "paper": 88,
+      "plastic": 72,
+      "trash": 21
+    },
+    "test": {
+      "cardboard": 60,
+      "glass": 75,
+      "metal": 61,
+      "paper": 91,
+      "plastic": 72,
+      "trash": 20
+    }
+  }
+}

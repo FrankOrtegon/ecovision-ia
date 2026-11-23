@@ -1,0 +1,70 @@
+{
+  "total_files": 2527,
+  "valid_images": 2527,
+  "corrupt_images": [],
+  "counts_per_class": {
+    "cardboard": 403,
+    "glass": 501,
+    "metal": 410,
+    "paper": 594,
+    "plastic": 482,
+    "trash": 137
+  },
+  "proportion_per_class": {
+    "cardboard": 0.1595,
+    "glass": 0.1983,
+    "metal": 0.1622,
+    "paper": 0.2351,
+    "plastic": 0.1907,
+    "trash": 0.0542
+  },
+  "imbalance_ratio_max_over_min": 4.34,
+  "extensions": {
+    ".jpg": 2527
+  },
+  "unsupported_extensions": [],
+  "formats": {
+    "JPEG": 2527
+  },
+  "modes": {
+    "RGB": 2527
+  },
+  "dimensions": {
+    "width_min": 512,
+    "width_max": 512,
+    "height_min": 384,
+    "height_max": 384,
+    "most_common_sizes": {
+      "512x384": 2527
+    }
+  },
+  "bytes": {
+    "min": 5604,
+    "max": 57868,
+    "mean": 17128.0
+  },
+  "exact_duplicates": {
+    "files_in_duplicate_groups": 6,
+    "groups": 3,
+    "groups_with_conflicting_labels": 3
+  },
+  "near_duplicates_phash": {
+    "0": {
+      "pairs": 5,
+      "cross_class_pairs": 3
+    },
+    "2": {
+      "pairs": 18,
+      "cross_class_pairs": 4
+    },
+    "4": {
+      "pairs": 28,
+      "cross_class_pairs": 5
+    },
+    "6": {
+      "pairs": 48,
+      "cross_class_pairs": 12
+    }
+  },
+  "unique_filenames": true
+}
