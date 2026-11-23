@@ -28,7 +28,7 @@ Capas del frontend (`frontend/src/`): `pages/`, `components/`, `services/api.ts`
 
 | Decisión | Alternativas | Razón |
 |---|---|---|
-| `inference-sdk` (`InferenceHTTPClient`) contra `https://serverless.roboflow.com` | HTTP crudo, paquete `roboflow` | Es el cliente recomendado en la documentación actual. La llamada se aísla en un adaptador, por lo que cambiarla afecta un archivo. |
+| `httpx` asíncrono contra la API REST serverless de Roboflow (`POST {url}/{proyecto}/{versión}`, cuerpo en base64) | `inference-sdk` (`InferenceHTTPClient`), paquete `roboflow` | Cambio respecto al diseño inicial: el endpoint REST está documentado, permite fijar timeout por solicitud, concurrencia asíncrona y menos dependencias. La llamada sigue aislada en `integrations/roboflow.py`. La API key viaja en la query string, por lo que el backend no registra URLs ni mensajes de excepciones de httpx. |
 | Evaluación como paquete Python en `ml/evaluation` | Duplicar lógica en backend | Una sola fuente de métricas auditable. |
 | Procesamiento en memoria | Guardar en disco | RNF-4. |
 | Sin base de datos | PostgreSQL | No hay requisito de persistencia; YAGNI. |

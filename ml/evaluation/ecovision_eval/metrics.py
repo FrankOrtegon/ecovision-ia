@@ -162,7 +162,7 @@ def compute_metrics(
     ap_vals = [cv.score for cv in pr if cv.score is not None]
     ap_macro = float(np.mean(ap_vals)) if ap_vals else None
 
-    confusions = [
+    confusions: list[dict[str, Any]] = [
         {"true": classes[i], "predicted": classes[j], "count": int(cm[i, j]),
          "share_of_true_class": float(cm[i, j] / support[i])}
         for i in range(k) for j in range(k) if i != j and cm[i, j] > 0

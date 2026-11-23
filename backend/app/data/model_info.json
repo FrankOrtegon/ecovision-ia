@@ -1,0 +1,20 @@
+{
+  "status": "pending_training",
+  "name": "EcoVision IA - clasificador de residuos",
+  "version": null,
+  "model_id": null,
+  "dataset": "TrashNet (Thung y Yang), 2521 imágenes usadas tras excluir 6 duplicados con etiquetas contradictorias",
+  "dataset_url": "https://github.com/garythung/trashnet",
+  "platform": "Roboflow",
+  "architecture": null,
+  "classes": ["cardboard", "glass", "metal", "paper", "plastic", "trash"],
+  "training_config": {},
+  "trained_at": null,
+  "metrics": null,
+  "limitations": [
+    "Clasifica el material aparente; no determina si un residuo es reciclable.",
+    "TrashNet tiene fotos de un solo objeto sobre fondo claro; el rendimiento puede bajar con escenas reales, varios objetos u otros fondos.",
+    "La clase 'trash' tiene pocos ejemplos (137 en total), por lo que sus métricas son menos fiables."
+  ],
+  "notes": "Entrenamiento pendiente de registrar. Esta información se completa con datos reales al terminar la Fase 3."
+}

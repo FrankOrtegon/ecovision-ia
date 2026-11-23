@@ -1,0 +1,49 @@
+[project]
+name = "ecovision-backend"
+version = "0.1.0"
+description = "API de EcoVision IA: clasificación de residuos con un modelo alojado en Roboflow"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "pydantic>=2.7",
+  "pydantic-settings>=2.3",
+  "python-multipart>=0.0.9",
+  "pillow>=10.3",
+  "httpx>=0.27",
+  "pandas>=2.2",
+  "numpy>=1.26",
+  # También requiere el paquete local ecovision-eval: pip install -e ../ml/evaluation
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.2", "pytest-asyncio>=0.23", "ruff>=0.5", "mypy>=1.10", "pandas-stubs"]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = ["error::DeprecationWarning:app.*"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S"]
+ignore = ["S101"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S", "E501"]
+
+[tool.mypy]
+python_version = "3.11"
+mypy_path = ["../ml/evaluation"]
+strict = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["sklearn.*", "matplotlib.*"]
+ignore_missing_imports = true

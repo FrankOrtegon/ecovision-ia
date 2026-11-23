@@ -15,3 +15,6 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 include = ["ecovision_eval*"]
+
+[tool.setuptools.package-data]
+ecovision_eval = ["py.typed"]

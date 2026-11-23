@@ -31,13 +31,13 @@ Ordenado por dependencias. Un punto "BLOQUEO MANUAL" detiene solo esa etapa.
 - [ ] 4.4 `docs/evaluation.md` con resultados reales y análisis
 
 ## Fase 5: Backend
-- [ ] 5.1 Configuración, logging, CORS, manejo de errores
-- [ ] 5.2 Schemas Pydantic
-- [ ] 5.3 Validación de imágenes
-- [ ] 5.4 Adaptador Roboflow (timeout, errores)
-- [ ] 5.5 Endpoints health, model/info, predict, predict/batch, evaluate
-- [ ] 5.6 Pruebas: éxito, error, entradas inválidas, límites
-- [ ] 5.7 Ruff + mypy limpios
+- [x] 5.1 Configuración, logging, CORS, manejo de errores
+- [x] 5.2 Schemas Pydantic
+- [x] 5.3 Validación de imágenes
+- [x] 5.4 Adaptador Roboflow (timeout, errores). Verificación contra el modelo real pendiente de Fase 3 (3.4)
+- [x] 5.5 Endpoints health, model/info, predict, predict/batch, evaluate
+- [x] 5.6 Pruebas: éxito, error, entradas inválidas, límites
+- [x] 5.7 Ruff + mypy limpios
 
 ## Fase 6: Frontend
 - [ ] 6.1 Vite + React + TS + Tailwind + Router + Recharts + Axios
