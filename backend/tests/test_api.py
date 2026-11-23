@@ -66,11 +66,24 @@ def test_predict_accepts_supported_formats(client: TestClient, fmt: str, name: s
     assert client.post("/api/predict", files=[img(name, fmt)]).status_code == 200
 
 
-def test_predict_fills_missing_classes_and_flags_it(client: TestClient, fake: FakeClassifier) -> None:
-    fake.queue.append({"glass": 0.7, "metal": 0.2})
+def test_predict_estimates_omitted_classes_with_the_residual(
+    client: TestClient, fake: FakeClassifier
+) -> None:
+    # El proveedor devuelve glass 0.97 y metal 0.02. Residuo = 0.01 repartido entre 4 clases omitidas = 0.0025.
+    fake.queue.append({"glass": 0.97, "metal": 0.02})
     j = client.post("/api/predict", files=[img()]).json()["result"]
-    assert j["incomplete_probabilities"] is True
-    assert len(j["probabilities"]) == 6
+    assert j["estimated_probabilities"] is True
+    probs = {p["label"]: p["probability"] for p in j["probabilities"]}
+    assert probs["glass"] == 0.97 and probs["metal"] == 0.02
+    for c in ("cardboard", "paper", "plastic", "trash"):
+        assert probs[c] == pytest.approx(0.0025)
+    assert sum(probs.values()) == pytest.approx(1.0)
+    assert j["resolved_model"] == "workspace-prueba/modelo-falso"
+
+
+def test_predict_complete_probabilities_are_not_flagged(client: TestClient, fake: FakeClassifier) -> None:
+    fake.queue.append(peaked("glass", 0.9))
+    assert client.post("/api/predict", files=[img()]).json()["result"]["estimated_probabilities"] is False
 
 
 def test_predict_rejects_bad_extension(client: TestClient, fake: FakeClassifier) -> None:
@@ -208,6 +221,8 @@ def test_evaluate_success_and_hand_checked_numbers(client: TestClient, fake: Fak
     assert j["auc_macro"] is None and "no calculable" in j["auc_macro_note"]
     assert any(c["label"] == "cardboard" and c["score"] is None for c in j["roc"])
     assert len(j["rows"]) == 4
+    assert j["resolved_models"] == ["workspace-prueba/modelo-falso"]
+    assert j["n_estimated_probabilities"] == 0
 
 
 def test_evaluate_reports_unmatched_and_failed(client: TestClient, fake: FakeClassifier) -> None:

@@ -11,6 +11,7 @@ from PIL import Image
 
 from app.api.deps import get_classifier
 from app.core.config import Settings
+from app.integrations.roboflow import ProviderResult
 from app.main import create_app
 
 CLASSES = ["cardboard", "glass", "metal", "paper", "plastic", "trash"]
@@ -31,12 +32,12 @@ class FakeClassifier:
         self.calls = 0
         self.queue: list[dict[str, float] | Exception] = []
 
-    async def classify(self, image_bytes: bytes) -> dict[str, float]:
+    async def classify(self, image_bytes: bytes) -> ProviderResult:
         self.calls += 1
         item = self.queue.pop(0) if self.queue else peaked("plastic", 0.9)
         if isinstance(item, Exception):
             raise item
-        return item
+        return ProviderResult(item, "workspace-prueba/modelo-falso")
 
 
 def peaked(label: str, p: float) -> dict[str, float]:

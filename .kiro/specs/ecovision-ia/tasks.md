@@ -19,9 +19,9 @@ Ordenado por dependencias. Un punto "BLOQUEO MANUAL" detiene solo esa etapa.
 
 ## Fase 3: Entrenamiento en Roboflow
 - [x] 3.1 Verificar documentación vigente de Roboflow (UI, límites del plan, formatos de carga)
-- [ ] 3.2 BLOQUEO MANUAL: crear cuenta/proyecto, subir particiones, entrenar versión base y ajustada. Entregar al agente: workspace, project id, versión, API key en `.env`
+- [~] 3.2 BLOQUEO MANUAL (modelo 1 entrenado; falta la versión con aumento): crear cuenta/proyecto, subir particiones, entrenar versión base y ajustada. Entregar al agente: workspace, project id, versión, API key en `.env`
 - [ ] 3.3 Registrar `ml/results/training_log.json` y `backend/app/data/model_info.json` con datos reales
-- [ ] 3.4 Llamada de prueba real: confirmar que se devuelven las 6 probabilidades
+- [x] 3.4 Llamada de prueba real: el proveedor omite clases con p < ~1 % incluso con confidence=0; se estiman con el residuo y se marca (ver docs/training.md)
 - [ ] 3.5 `docs/training.md`
 
 ## Fase 4: Evaluación

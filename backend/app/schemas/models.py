@@ -38,9 +38,15 @@ class PredictionResult(BaseModel):
     confidence: float = Field(ge=0, le=1)
     low_confidence: bool
     probabilities: list[ClassProbability]
-    incomplete_probabilities: bool = Field(
+    estimated_probabilities: bool = Field(
         default=False,
-        description="True si el proveedor no devolvió alguna clase y se completó con 0.",
+        description=(
+            "True si el proveedor omitió clases con probabilidad muy baja (menos de ~1 %) y se "
+            "estimaron repartiendo el residuo 1 - suma entre ellas."
+        ),
+    )
+    resolved_model: str | None = Field(
+        default=None, description="Modelo que el proveedor resolvió para esta predicción."
     )
 
 
@@ -129,8 +135,10 @@ class EvaluationRow(BaseModel):
 
 class EvaluationResponse(BaseModel):
     model_id: str
+    resolved_models: list[str]
     n_requested: int
     n_evaluated: int
+    n_estimated_probabilities: int
     accuracy: float
     per_class: list[PerClassMetrics]
     macro: AveragedMetrics

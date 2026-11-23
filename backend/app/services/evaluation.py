@@ -94,11 +94,17 @@ async def evaluate(
         warnings.append(f"{len(unmatched_labels)} filas del CSV no tienen imagen y se omitieron.")
     if failed:
         warnings.append(f"{len(failed)} imágenes fallaron y no cuentan en las métricas.")
-    if any(it.result and it.result.incomplete_probabilities for it in ok):
+    n_estimated = sum(1 for it in ok if it.result and it.result.estimated_probabilities)
+    if n_estimated:
         warnings.append(
-            "El proveedor no devolvió las seis clases en algunas imágenes; se completaron con 0. "
-            "Las curvas ROC y PR pueden estar sesgadas."
+            f"En {n_estimated} de {len(ok)} imágenes el proveedor omitió clases con probabilidad "
+            "menor a ~1 %. "
+            "Esas probabilidades se estimaron con el residuo (1 - suma). Las curvas ROC y PR son aproximadas "
+            "en la cola de probabilidades bajas."
         )
+    resolved = sorted({it.result.resolved_model for it in ok if it.result and it.result.resolved_model})
+    if len(resolved) > 1:
+        warnings.append(f"El proveedor respondió con más de un modelo: {', '.join(resolved)}.")
 
     rows = [
         EvaluationRow(
@@ -113,8 +119,10 @@ async def evaluate(
     ]
     return EvaluationResponse(
         model_id=classifier.model_id,
+        resolved_models=resolved,
         n_requested=len(labels),
         n_evaluated=res.n_samples,
+        n_estimated_probabilities=n_estimated,
         accuracy=res.accuracy,
         per_class=[PerClassMetrics(**vars(pc)) for pc in res.per_class],
         macro=AveragedMetrics(**res.macro),

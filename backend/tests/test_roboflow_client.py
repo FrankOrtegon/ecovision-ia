@@ -17,6 +17,7 @@ GOOD = {
     "predictions": [{"class": "glass", "confidence": 0.7}, {"class": "metal", "confidence": 0.3}],
     "top": "glass",
     "confidence": 0.7,
+    "resolved_model": {"model_id": "ws/proyecto-modelo", "backend": "trt"},
 }
 
 
@@ -32,13 +33,17 @@ async def test_success_and_request_shape() -> None:
         seen["url"] = req.url
         seen["body"] = req.content
         seen["ct"] = req.headers["content-type"]
+        seen["auth"] = req.headers.get("authorization")
         return httpx.Response(200, json=GOOD)
 
-    probs = await make_client(handler).classify(b"imagen")
-    assert probs == {"glass": 0.7, "metal": 0.3}
+    out = await make_client(handler).classify(b"imagen")
+    assert out.probabilities == {"glass": 0.7, "metal": 0.3}
+    assert out.resolved_model == "ws/proyecto-modelo"
     url = seen["url"]
     assert str(url).startswith("https://serverless.roboflow.com/proyecto-prueba/1?")
-    assert url.params["api_key"] == SECRET and url.params["confidence"] == "0"
+    assert seen["auth"] == f"Bearer {SECRET}"
+    assert "api_key" not in url.params and SECRET not in str(url)  # la clave nunca va en la URL
+    assert url.params["confidence"] == "0"
     assert seen["body"] == base64.b64encode(b"imagen")
     assert seen["ct"] == "application/x-www-form-urlencoded"
 
@@ -78,7 +83,7 @@ async def test_retries_once_on_503_then_succeeds() -> None:
         calls["n"] += 1
         return httpx.Response(503) if calls["n"] == 1 else httpx.Response(200, json=GOOD)
 
-    assert await make_client(handler).classify(b"x") == {"glass": 0.7, "metal": 0.3}
+    assert (await make_client(handler).classify(b"x")).probabilities == {"glass": 0.7, "metal": 0.3}
     assert calls["n"] == 2
 
 

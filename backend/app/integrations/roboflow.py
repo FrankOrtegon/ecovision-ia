@@ -1,10 +1,14 @@
 """Cliente del modelo de clasificación alojado en Roboflow (API serverless).
 
-Endpoint documentado: POST {api_url}/{proyecto}/{versión}?api_key=...
-con el cuerpo de la imagen en base64. Respuesta de clasificación monoetiqueta:
+Endpoint: POST {api_url}/{proyecto}/{versión} con el cuerpo de la imagen en base64 y la clave en la
+cabecera "Authorization: Bearer <clave>" (verificado con una llamada real el 2026-11-23).
+Respuesta de clasificación monoetiqueta:
 {"predictions": [{"class": "...", "confidence": 0.9}, ...], "top": "...", "confidence": 0.9}.
 
-Seguridad: la URL contiene la API key. Por eso nunca se registra la URL ni el texto de
+Comportamiento observado: aunque se envíe confidence=0, el proveedor omite las clases con
+probabilidad menor a ~1 %. La estimación de esas clases se hace en services/prediction.py.
+
+Seguridad: la clave viaja solo en la cabecera. Aun así no se registran URLs ni el texto de
 las excepciones de httpx; solo su tipo.
 """
 
@@ -13,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import logging
+from dataclasses import dataclass
 from typing import Any, Protocol
 
 import httpx
@@ -26,16 +31,24 @@ logger = logging.getLogger("ecovision.roboflow")
 RETRY_STATUS = {502, 503, 504}
 
 
+@dataclass(frozen=True)
+class ProviderResult:
+    """Probabilidades por clase (pueden faltar clases) y el modelo que el proveedor resolvió."""
+
+    probabilities: dict[str, float]
+    resolved_model: str | None = None
+
+
 class Classifier(Protocol):
     model_id: str
 
-    async def classify(self, image_bytes: bytes) -> dict[str, float]:
-        """Devuelve probabilidad por clase. Puede omitir clases que el proveedor no devuelva."""
+    async def classify(self, image_bytes: bytes) -> ProviderResult:
+        """Clasifica una imagen. Puede omitir clases que el proveedor no devuelva."""
         ...
 
 
-def parse_classification(payload: Any) -> dict[str, float]:
-    """Normaliza la respuesta de Roboflow a {clase: probabilidad}."""
+def parse_classification(payload: Any) -> ProviderResult:
+    """Normaliza la respuesta de Roboflow."""
     if not isinstance(payload, dict):
         raise AppError("upstream_error", "Respuesta inesperada del proveedor del modelo.", 502)
     preds = payload.get("predictions")
@@ -65,7 +78,9 @@ def parse_classification(payload: Any) -> dict[str, float]:
         probs[name] = conf
     if not probs:
         raise AppError("upstream_error", "El modelo no devolvió ninguna predicción.", 502)
-    return probs
+    resolved = payload.get("resolved_model")
+    resolved_id = resolved.get("model_id") if isinstance(resolved, dict) else None
+    return ProviderResult(probs, str(resolved_id)[:120] if resolved_id else None)
 
 
 class RoboflowClient:
@@ -77,16 +92,19 @@ class RoboflowClient:
                 503,
             )
         self._http = http
-        self._key = settings.roboflow_api_key.get_secret_value()
+        self._key = settings.roboflow_api_key.get_secret_value()  # solo se usa en la cabecera
         self._url = f"{settings.roboflow_api_url.rstrip('/')}/{settings.roboflow_model_id}"
         self._confidence = settings.roboflow_confidence_percent
         self._timeout = settings.roboflow_timeout_s
         self.model_id = settings.roboflow_model_id
 
-    async def classify(self, image_bytes: bytes) -> dict[str, float]:
+    async def classify(self, image_bytes: bytes) -> ProviderResult:
         body = base64.b64encode(image_bytes)
-        params = {"api_key": self._key, "confidence": str(self._confidence)}
-        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        params = {"confidence": str(self._confidence)}
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Authorization": f"Bearer {self._key}",
+        }
         last: AppError | None = None
         for attempt in (1, 2):
             try:

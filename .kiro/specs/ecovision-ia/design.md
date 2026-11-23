@@ -34,7 +34,7 @@ Capas del frontend (`frontend/src/`): `pages/`, `components/`, `services/api.ts`
 | Sin base de datos | PostgreSQL | No hay requisito de persistencia; YAGNI. |
 | `model_info.json` versionado, generado a partir del entrenamiento real | Valores en código | Evita cifras inventadas. Si falta, `/api/model/info` marca los campos como pendientes. |
 
-**Riesgo conocido**: un modelo de clasificación de Roboflow debe devolver las 6 probabilidades para calcular ROC. El formato documentado de clasificación monoetiqueta incluye `predictions` (lista de `class`/`confidence`) y `top`. En Fase 3 se verifica con una llamada real que se devuelvan todas las clases. Si no, se ajusta el umbral de confianza de la solicitud o se documenta la limitación de ROC.
+**Riesgo resuelto con una llamada real (2026-11-23)**: el proveedor devuelve solo las clases con probabilidad de ~1 % o más, incluso con `confidence=0`. El backend estima las omitidas con el residuo (1 − suma) y lo marca con `estimated_probabilities`. Detalle y cuantificación en `docs/training.md` y `docs/evaluation.md`.
 
 ## 3. Modelo de datos y contratos API
 

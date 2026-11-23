@@ -10,7 +10,7 @@ from fastapi import UploadFile
 
 from app.core.config import Settings
 from app.core.errors import AppError
-from app.integrations.roboflow import Classifier
+from app.integrations.roboflow import Classifier, ProviderResult
 from app.schemas.models import (
     CLASS_NAMES,
     BatchItem,
@@ -22,9 +22,23 @@ from app.services.images import read_upload, safe_filename, validate_image
 logger = logging.getLogger("ecovision.prediction")
 
 
-def build_result(filename: str, probs: dict[str, float], threshold: float) -> PredictionResult:
-    full = [probs.get(c, 0.0) for c in CLASS_NAMES]
-    incomplete = any(c not in probs for c in CLASS_NAMES)
+MAX_OMITTED_PROB = 0.02  # el proveedor omite clases con p < ~1 % (observado: 0,0052 omitida, 0,0137 incluida)
+
+
+def build_result(filename: str, provider: ProviderResult, threshold: float) -> PredictionResult:
+    """Completa las clases omitidas con el residuo (1 - suma) repartido en partes iguales."""
+    probs = provider.probabilities
+    missing = [c for c in CLASS_NAMES if c not in probs]
+    fill = 0.0
+    if missing:
+        fill = max(0.0, 1.0 - sum(probs.values())) / len(missing)
+        if fill > MAX_OMITTED_PROB:
+            logger.warning(
+                "Las clases omitidas suman más de lo esperado (%.3f por clase); "
+                "revisar el umbral del proveedor",
+                fill,
+            )
+    full = [probs.get(c, fill) for c in CLASS_NAMES]
     best = max(range(len(CLASS_NAMES)), key=lambda i: full[i])
     return PredictionResult(
         filename=filename,
@@ -34,7 +48,8 @@ def build_result(filename: str, probs: dict[str, float], threshold: float) -> Pr
         probabilities=[
             ClassProbability(label=c, probability=p) for c, p in zip(CLASS_NAMES, full, strict=True)
         ],
-        incomplete_probabilities=incomplete,
+        estimated_probabilities=bool(missing),
+        resolved_model=provider.resolved_model,
     )
 
 
@@ -42,8 +57,8 @@ async def predict_bytes(
     classifier: Classifier, filename: str, content: bytes, settings: Settings
 ) -> PredictionResult:
     img = validate_image(filename, content, settings)
-    probs = await classifier.classify(img.content)
-    return build_result(filename, probs, settings.low_confidence_threshold)
+    provider = await classifier.classify(img.content)
+    return build_result(filename, provider, settings.low_confidence_threshold)
 
 
 @dataclass(frozen=True)
