@@ -10,7 +10,8 @@ from pydantic import ValidationError
 from app.api.deps import settings_dep
 from app.core.config import Settings
 from app.core.errors import AppError
-from app.schemas.models import HealthResponse, ModelInfo
+from app.schemas.models import HealthResponse, Limits, ModelInfo
+from app.services.images import ALLOWED_EXTENSIONS
 
 router = APIRouter(prefix="/api", tags=["sistema"])
 logger = logging.getLogger("ecovision.system")
@@ -23,6 +24,13 @@ def health(settings: Annotated[Settings, Depends(settings_dep)]) -> HealthRespon
         version=settings.app_version,
         environment=settings.environment,
         model_configured=settings.model_configured,
+        limits=Limits(
+            max_image_mb=settings.max_image_mb,
+            max_batch_files=settings.max_batch_files,
+            max_eval_files=settings.max_eval_files,
+            low_confidence_threshold=settings.low_confidence_threshold,
+            allowed_extensions=sorted(ALLOWED_EXTENSIONS),
+        ),
     )
 
 

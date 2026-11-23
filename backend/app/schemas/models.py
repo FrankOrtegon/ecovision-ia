@@ -20,11 +20,20 @@ class ErrorResponse(BaseModel):
     detail: ErrorDetail
 
 
+class Limits(BaseModel):
+    max_image_mb: float
+    max_batch_files: int
+    max_eval_files: int
+    low_confidence_threshold: float
+    allowed_extensions: list[str]
+
+
 class HealthResponse(BaseModel):
     status: Literal["ok", "degraded"]
     version: str
     environment: str
     model_configured: bool
+    limits: Limits
 
 
 class ClassProbability(BaseModel):

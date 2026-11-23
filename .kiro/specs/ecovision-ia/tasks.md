@@ -40,10 +40,10 @@ Ordenado por dependencias. Un punto "BLOQUEO MANUAL" detiene solo esa etapa.
 - [x] 5.7 Ruff + mypy limpios
 
 ## Fase 6: Frontend
-- [ ] 6.1 Vite + React + TS + Tailwind + Router + Recharts + Axios
-- [ ] 6.2 Layout, navegación, tema verde
-- [ ] 6.3 Inicio · 6.4 Clasificador · 6.5 Lotes · 6.6 Evaluación · 6.7 Acerca del modelo
-- [ ] 6.8 Vitest, `tsc`, `eslint`, build
+- [x] 6.1 Vite + React + TS + Tailwind + Router + Recharts + Axios
+- [x] 6.2 Layout, navegación, tema verde
+- [x] 6.3 Inicio · 6.4 Clasificador · 6.5 Lotes · 6.6 Evaluación · 6.7 Acerca del modelo
+- [x] 6.8 Vitest, `tsc`, `eslint`, build
 
 ## Fase 7: Integración
 - [ ] 7.1 Ejecución local completa con modelo real

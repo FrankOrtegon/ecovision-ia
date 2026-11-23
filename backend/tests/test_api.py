@@ -18,12 +18,18 @@ def test_health_ok(client: TestClient) -> None:
 
 
 def test_health_degraded_without_model(unconfigured_client: TestClient) -> None:
-    r = unconfigured_client.get("/api/health")
-    assert r.json() == {
-        "status": "degraded",
-        "version": "0.1.0",
-        "environment": "test",
-        "model_configured": False,
+    j = unconfigured_client.get("/api/health").json()
+    assert j["status"] == "degraded" and j["model_configured"] is False
+
+
+def test_health_publishes_limits_for_the_frontend(client: TestClient) -> None:
+    lim = client.get("/api/health").json()["limits"]
+    assert lim == {
+        "max_image_mb": 1.0,
+        "max_batch_files": 3,
+        "max_eval_files": 10,
+        "low_confidence_threshold": 0.6,
+        "allowed_extensions": [".jpeg", ".jpg", ".png", ".webp"],
     }
 
 

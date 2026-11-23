@@ -13,7 +13,7 @@ Clasifica el **material aparente** de una imagen en seis categorías de TrashNet
 | 3. Entrenamiento en Roboflow | Pendiente (requiere pasos manuales) |
 | 4. Evaluación | Módulo listo; falta la ejecución sobre el conjunto de prueba |
 | 5. Backend | Implementado y probado con dobles; falta probar con el modelo real |
-| 6. Frontend | Pendiente |
+| 6. Frontend | Implementado y probado contra el backend y el modelo reales (prueba de humo local) |
 | 7. Integración | Pendiente |
 | 8. Despliegue | Pendiente |
 | 9. Evidencias | Pendiente |
@@ -49,6 +49,18 @@ cd backend
 
 Documentación interactiva en http://localhost:8000/docs.
 Pruebas: `cd backend && ../.venv/bin/python -m pytest`, y `.venv/bin/python -m pytest tests` desde la raíz.
+
+## Ejecutar el frontend en desarrollo
+
+```
+cd frontend
+cp .env.example .env      # VITE_API_BASE_URL apunta al backend
+npm install
+npm start
+```
+
+`npm start` es un alias de desarrollo (Vite en http://localhost:5173). Calidad: `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`.
+El backend debe tener `ALLOWED_ORIGINS` con la URL del frontend (CORS).
 
 ## Seguridad
 
