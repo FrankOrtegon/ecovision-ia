@@ -28,3 +28,6 @@ ml/data/*
 
 # Material del curso (derechos de autor, no versionar)
 CONTEXT/
+
+# Generado por docs/informe/build_informe.py (la fuente son docs/informe/parts)
+docs/informe/informe.html
